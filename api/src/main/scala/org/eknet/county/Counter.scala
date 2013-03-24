@@ -91,15 +91,15 @@ trait Counter {
 
 trait CounterBase extends Counter {
 
-  def increment() {
+  override def increment() {
     add(1L)
   }
 
-  def decrement() {
+  override def decrement() {
     add(-1L)
   }
 
-  def add(value: Long) {
-    add(TimeKey(System.currentTimeMillis()), value)
+  override def add(value: Long) {
+    add(TimeKey.now, value)
   }
 }

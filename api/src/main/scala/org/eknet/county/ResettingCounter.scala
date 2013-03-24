@@ -7,17 +7,17 @@ package org.eknet.county
  * @author Eike Kettner eike.kettner@gmail.com
  * @since 23.03.13 02:06
  */
-class ResettingCounter(val self: Counter, interval: Long) extends ProxyCounter {
+class ResettingCounter(val self: Counter, interval: Long) extends ProxyCounter with CounterBase {
 
-  private[this] def checkAndReset() {
-    val now = System.currentTimeMillis()
+  private[this] def checkAndReset(when: TimeKey) {
+    val now = when.timestamp
     if (now - lastAccess > interval) {
       reset()
     }
   }
 
   override def add(when: TimeKey, value: Long) {
-    checkAndReset()
+    checkAndReset(when)
     self.add(when, value)
   }
 

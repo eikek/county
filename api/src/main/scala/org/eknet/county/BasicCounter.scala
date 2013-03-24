@@ -18,7 +18,7 @@ class BasicCounter(val granularity: Granularity) extends CounterBase with Serial
   @transient
   private var map = new ConcurrentSkipListMap[TimeKey, AtomicLong]()
 
-  private val last = new AtomicLong(System.currentTimeMillis())
+  private val last = new AtomicLong(0)
   private val resettime = new AtomicLong(System.currentTimeMillis())
 
   def add(when: TimeKey, value: Long) {

@@ -76,4 +76,18 @@ class BasicCounterSuite extends FunSuite with ShouldMatchers {
     r.keys.toList(2).timestamp should be (1364044220775L)
     r.totalCount should be (4)
   }
+
+  test ("dropping counter") {
+    val counter = new DroppingCounter(new BasicCounter(Granularity.Millis), 100L)
+    counter.increment()
+    counter.increment()
+    counter.increment()
+
+    counter.totalCount should be (1)
+    Thread.sleep(101L)
+    counter.increment()
+    counter.increment()
+
+    counter.totalCount should be (2)
+  }
 }
