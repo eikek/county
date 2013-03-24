@@ -7,24 +7,22 @@ object Resolvers {
 }
 
 object Version {
-  val blueprints = "2.2.0"
+  val blueprints = "2.3.0"
   val grizzled = "0.6.10"
   val logback = "1.0.10"
   val orientdb = "1.3.0"
   val scalaTest = "2.0.M6-SNAP3"
-  val scue = "0.2.0"
   val slf4j = "1.7.2"
   val scala = "2.9.2"
 }
 
 object Dependencies {
-  val blueprintsCore = "com.tinkerpop.blueprints" % "blueprints-core" % Version.blueprints intransitive()
-  val blueprintsOrient = "com.tinkerpop.blueprints" % "blueprints-orient-graph" % Version.blueprints intransitive()
+  val blueprintsCore = "com.tinkerpop.blueprints" % "blueprints-core" % Version.blueprints % "provided" intransitive()
+  val blueprintsOrient = "com.tinkerpop.blueprints" % "blueprints-orient-graph" % Version.blueprints % "test"
   val grizzledSlf4j = "org.clapper" %% "grizzled-slf4j" % Version.grizzled exclude("org.slf4j", "slf4j-api") //scala 2.9.2 only
   val logbackClassic = "ch.qos.logback" % "logback-classic" % Version.logback  exclude("org.slf4j", "slf4j-api")
   val orientdb = "com.orientechnologies" % "orientdb-core" % Version.orientdb
   val scalaTest = "org.scalatest" %% "scalatest" % Version.scalaTest % "test"
-  val scue = "org.eknet.scue" %% "scue" % Version.scue
   val slf4jApi = "org.slf4j" % "slf4j-api" % Version.slf4j
 }
 
@@ -35,7 +33,8 @@ object RootBuild extends Build {
     base = file("."),
     settings = buildSettings
   ) aggregate (
-     Api.module
+     Api.module,
+     BlueprintsBackend.module
   )
 
   val buildSettings = Project.defaultSettings ++ Seq(
@@ -72,3 +71,18 @@ object Api extends Build {
   
 }
 
+object BlueprintsBackend extends Build {
+
+  lazy val module = Project(
+    id = "county-backend-blueprints",
+    base = file("backend-blueprints"),
+    settings = buildSettings
+  ) dependsOn(Api.module)
+
+  lazy val buildSettings = Project.defaultSettings ++ Seq(
+    name := "county-backend-blueprints",
+    libraryDependencies ++= deps
+  )
+
+  lazy val deps = Seq(blueprintsCore)
+}
