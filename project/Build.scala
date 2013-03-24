@@ -11,9 +11,9 @@ object Version {
   val grizzled = "0.6.10"
   val logback = "1.0.10"
   val orientdb = "1.3.0"
-  val scalaTest = "2.0.M6-SNAP3"
-  val slf4j = "1.7.2"
   val scala = "2.9.2"
+  val scalaTest = "1.9.1"
+  val slf4j = "1.7.4"
 }
 
 object Dependencies {
@@ -46,10 +46,14 @@ object RootBuild extends Build {
     organization := "org.eknet.county",
     scalaVersion := Version.scala,
     publishTo := Some("eknet-maven2" at "https://eknet.org/maven2"),
+    publishArtifact in Test := true,
     credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
+    crossScalaVersions := Seq("2.9.2", "2.9.3", "2.10.1"),
     exportJars := true,
     scalacOptions ++= Seq("-unchecked", "-deprecation"),
     resolvers := Seq(Resolvers.eknet),
+    pomIncludeRepository := (_ => false),
+    scmInfo := Some(ScmInfo(new URL("https://eknet.org/gitr/?r=county.git"), "scm:git:https://eknet.org/git/county.git")),
     licenses := Seq(("ASL2", new URL("http://www.apache.org/licenses/LICENSE-2.0.txt")))
   )
 }
