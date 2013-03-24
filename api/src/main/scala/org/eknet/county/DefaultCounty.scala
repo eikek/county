@@ -70,13 +70,18 @@ object DefaultCounty {
       try {
         search(List(this), name) match {
           case Nil => {
-            childLock.readLock().unlock()
-            childLock.writeLock().lock()
-            try {
-              create(name)
-            } finally {
-              childLock.writeLock().unlock()
-              childLock.readLock().lock()
+            if (name.hasWildcard) {
+              //return an empty counter
+              new Tree(path / name, ListBuffer(), p => new BasicCompositeCounter(List()))
+            } else {
+              childLock.readLock().unlock()
+              childLock.writeLock().lock()
+              try {
+                create(name)
+              } finally {
+                childLock.writeLock().unlock()
+                childLock.readLock().lock()
+              }
             }
           }
           case n::Nil => n

@@ -17,18 +17,18 @@ The simple entity, everything else is build on top, is the `Counter`. A `Counter
 simple, it only allows to add numeric values. The counter organizes them using a timestamp
 that specifies the point in time the counter was modified. In other words, there exists
 a numeric value for one timestamp. that is incremented (or decremented, resp) if the counter
-is modified by multiple threads at the same time. You can define a `Granularity` that is
-used to normalize the timestamp, such that all counts within one second, minute or month
-are accumulated at one value.
+is modified by multiple threads at the same time. You can define a `Granularity` to normalize
+the timestamp keys, such that all counts within one second, minute or month are accumulated at
+one value.
 
 The counter itself does not define _what_ it counts, it just manages some numbers. The
 counter lets you read its total count as well as counts in a time range. For example, you
 might want to know the total number of visits of a web page and the number of visits on a
-certain day. To propery answer this, the counter must be configured with a minimum `Granularity`,
+certain day. To answer this, the counter must be configured with a minimum `Granularity`,
 of course.
 
-The other part is a registry for counters. This registry finally maps a name to a counter,
-which names the event to be counted.
+Next, there is is a registry for counters, the `CounterPool`. This registry finally maps a
+`String` to a counter, which names the event to be counted.
 
 So the main component is a set of named counters. You can retrieve or create counters by
 name and use them.
@@ -64,24 +64,25 @@ Now there is a simple tree
      .´|`- `.
     1  2  3  1
 
-where the leaf nodes have real counters attached. Inner nodes are counters that delegate to
-its children. An inner node's value is the sum of its children. For the example above
+where the leaf nodes have real counters attached. Inner nodes are composite counters that delegate to
+its children. That means an inner node's value is the sum of its children. For the example above
 
     county("a.b").totalCount
 
-would return `3` now.
+would return `3`.
 
 The `County` object allows to retrieve a list of children that names the next nodes in the tree. For
 leaf nodes, the list is empty.
 
 ## Counter Sets
 
-Using a glob style path, a counter can be created that consists of other counters in the tree. For example:
+Using a glob style path, a composite counter can be created that consists of other counters in the tree. For example:
 
     county("a.*.1").increment()
 
 would increment the counters `a.b.1` and `a.c.1`. You can use `*` to match any character multiple times
-or `?` to match exactly one character.
+or `?` to match exactly one character. If the path pattern does not match any nodes, an empty counter
+is returned that cannot be modified.
 
 ## Filtering Keys
 

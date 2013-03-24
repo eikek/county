@@ -22,6 +22,7 @@ final case class CounterKey(path: List[String]) {
 
   def / (seg: CounterKey) = CounterKey(path ::: seg.path)
 
+  def hasWildcard = path.find(s => s.contains("*") || s.contains("?")).isDefined
 }
 
 object CounterKey {
