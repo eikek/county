@@ -88,5 +88,5 @@ object BlueprintsBackend extends Build {
     libraryDependencies ++= deps
   )
 
-  lazy val deps = Seq(blueprintsCore)
+  lazy val deps = Seq(slf4jApi, blueprintsCore, blueprintsOrient, scalaTest)
 }
