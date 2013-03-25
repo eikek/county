@@ -37,59 +37,52 @@ object DefaultCounty {
 
     private def isLeaf = childList.isEmpty && !self.isInstanceOf[TreeCounter]
 
-    private def counterLockRead[A](body: => A): A = {
-      counterLock.readLock().lock()
-      try {
-        body
-      } finally {
-        counterLock.readLock().unlock()
-      }
-    }
-
     private def setupCounter() {
-      counterLock.readLock().lock()
-      try {
+      implicit val rl = counterLock.readLock()
+      implicit val wl = counterLock.writeLock()
+      lockRead {
         if (self.isInstanceOf[TreeCounter] && childList.isEmpty) {
-          counterLock.readLock().unlock()
-          counterLock.writeLock().lock()
-          try {
+          upgradeLock {
             this.self = factory(path)
-          } finally {
-            counterLock.writeLock().unlock()
-            counterLock.readLock().lock()
           }
         }
-      } finally {
-        counterLock.readLock().unlock()
       }
     }
 
-    def apply(name: CounterKey) = {
+    private def nextChildren(name: String) = childList.filter { c =>
+      Glob(name, '.').matches(c.name)
+    }.toList
+
+    private def resolveNext(name: CounterKey): County = {
       require(!isLeaf, "Cannot go beyond leaf nodes.")
-      childLock.readLock().lock()
-      try {
-        search(List(this), name) match {
+      implicit val rl = childLock.readLock()
+      implicit val wl = childLock.writeLock()
+      lockRead {
+        val nextSegs = nextChildren(name.headSegment) match {
           case Nil => {
             if (name.hasWildcard) {
               //return an empty counter
-              new Tree(path / name, ListBuffer(), p => new BasicCompositeCounter(List()))
+              List(new EmptyCounty(path / name))
             } else {
-              childLock.readLock().unlock()
-              childLock.writeLock().lock()
-              try {
-                create(name)
-              } finally {
-                childLock.writeLock().unlock()
-                childLock.readLock().lock()
+              upgradeLock {
+                List(addChild(new Tree(path / name.head, ListBuffer(), factory)))
               }
             }
           }
-          case n::Nil => n
-          case all@n::ns => new BasicCompositeCounty(path / name, all)
+          case list => list
         }
-      } finally {
-        childLock.readLock().unlock()
+        val nextCounty = if (nextSegs.size == 1) nextSegs(0) else new BasicCompositeCounty(path / name.head, nextSegs)
+        if (name.size == 1) {
+          nextCounty
+        } else {
+          nextCounty(name.tail)
+        }
       }
+    }
+
+    def apply(name: CounterKey*): County = {
+      val next = name.map(resolveNext)
+      if (next.size == 1) next(0) else new BasicCompositeCounty(name.head / "**", next)
     }
 
     def findChild(name: String) = childList.find(c => c.name == name)
@@ -128,57 +121,52 @@ object DefaultCounty {
       self.add(value)
     }
 
-    def totalCount = counterLockRead {
+    def totalCount = wrapLock(counterLock.readLock()) {
       self.totalCount
     }
 
-    def countAt(key: TimeKey) = counterLockRead {
+    def countAt(key: TimeKey) = wrapLock(counterLock.readLock()) {
       self.countAt(key)
     }
 
     def reset() {
-      counterLock.writeLock().lock()
-      try {
+      wrapLock(counterLock.writeLock()) {
         self.reset()
-      } finally {
-        counterLock.writeLock().unlock()
       }
     }
 
-    def resetTime = counterLockRead(self.resetTime)
-    def lastAccess = counterLockRead(self.lastAccess)
-    def keys = counterLockRead(self.keys)
+    def resetTime = wrapLock(counterLock.readLock())(self.resetTime)
+    def lastAccess = wrapLock(counterLock.readLock())(self.lastAccess)
+    def keys = wrapLock(counterLock.readLock())(self.keys)
 
     def filterKey(fun: (String) => String): County = new FilterKeyCounty(this, List(this), fun)
 
     def transformKey(fun: (String) => String): County = new TransformKeyCounty(this, List(this), fun)
 
-    def children = {
-      childLock.readLock().lock()
-      try {
-        this.childList.map(_.name).toList.sorted
-      } finally {
-        childLock.readLock().unlock()
-      }
+    def children = wrapLock(counterLock.readLock()) {
+      this.childList.map(_.name).toList.sorted
     }
+  }
+
+  private class EmptyCounty(val path: CounterKey) extends County {
+    def add(when: TimeKey, value: Long) {}
+    def increment() {}
+    def decrement() {}
+    def add(value: Long) {}
+    def totalCount = 0L
+    def countAt(key: TimeKey) = 0L
+    def reset() {}
+    def resetTime = 0L
+    def lastAccess = 0L
+    def keys = List[TimeKey]()
+    def apply(name: CounterKey*) = if (name.size == 1) new EmptyCounty(path/name.head) else new EmptyCounty(path/name.head/"**")
+    def filterKey(fun: (String) => String) = this
+    def transformKey(fun: (String) => String) = this
+    def children = List[String]()
   }
 
   private class TreeCounter(nodes: Iterable[Tree]) extends CounterBase with CompositeCounter {
     def counters = nodes.map(_.self)
-  }
-
-  private def search(nodes: List[Tree], path: CounterKey): List[Tree] = {
-    def nextTrees(node: Tree, name: String) = {
-      val glob = Glob(name, '.')
-      node.childList.filter(n => glob.matches(n.path.lastSegment)).toList
-    }
-    if (path.empty) {
-      nodes
-    } else {
-      nodes flatMap { node =>
-        search(nextTrees(node, path.headSegment), path.tail)
-      }
-    }
   }
 
   private class FilterKeyCounty(val self: County, val nodes:List[Tree], fun: String => String) extends ProxyCounty {
@@ -188,12 +176,14 @@ object DefaultCounty {
       new BasicCompositeCounty(path / name, next)
     }
 
-    override def apply(name: CounterKey) = {
-      val multi = next(name.headSegment)
-      if (name.size == 1) {
-        multi
+    override def apply(names: CounterKey*) = {
+      val multi = names.map(n => next(n.headSegment))
+      val nextPath = if (names.size == 1) names.head else names.head / "**"
+      val multiCounty = if (multi.size == 1) multi(0) else new BasicCompositeCounty(path / nextPath, multi)
+      if (names.size == 1) {
+        multiCounty
       } else {
-        multi(name.tail)
+        multiCounty(names.map(_.tail): _*)
       }
     }
 
@@ -204,9 +194,9 @@ object DefaultCounty {
 
   private class TransformKeyCounty(val self: County, val nodes: List[Tree], fun: String => String) extends ProxyCounty {
 
-    override def apply(name: CounterKey) = {
-      val fn = CounterKey(fun(name.headSegment) :: name.path.tail)
-      self.apply(fn)
+    override def apply(name: CounterKey*) = {
+      val fn = name.map(n => CounterKey(fun(n.headSegment) :: n.path.tail))
+      self.apply(fn: _*)
     }
   }
 }

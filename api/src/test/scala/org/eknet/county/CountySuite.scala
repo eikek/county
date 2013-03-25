@@ -59,6 +59,8 @@ class CountySuite extends FunSuite with ShouldMatchers {
     empty.increment()
     empty.totalCount should be (0)
 
+    val more = county("a.*.c", "a.b.d")
+    more.totalCount should be (3)
   }
 
   test ("filter keys") {

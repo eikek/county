@@ -71,17 +71,22 @@ its children. That means an inner node's value is the sum of its children. For t
 
 would return `3`.
 
+In general, `county(path)` retrieves a node from the tree, creating it if it does not exist yet.
+
 The `County` object allows to retrieve a list of children that names the next nodes in the tree. For
 leaf nodes, the list is empty.
 
 ## Counter Sets
 
-Using a glob style path, a composite counter can be created that consists of other counters in the tree. For example:
+Specifying more than one path is possible and yields in a composite counter, that will operate on the
+given set of nodes. The same can be achieved by using path patterns with wildcards `*` or `?`.
+For example:
 
     county("a.*.1").increment()
+    county("a.b.1", "a.c.1").increment()
 
 would increment the counters `a.b.1` and `a.c.1`. You can use `*` to match any character multiple times
-or `?` to match exactly one character. If the path pattern does not match any nodes, an empty counter
+or `?` to match exactly one character. If the path pattern does not match any node, an empty counter
 is returned that cannot be modified.
 
 ## Filtering Keys
