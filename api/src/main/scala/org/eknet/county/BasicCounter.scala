@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013 Eike Kettner
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.eknet.county
 
 import java.util.concurrent.atomic.AtomicLong
@@ -37,8 +53,8 @@ class BasicCounter(val granularity: Granularity) extends CounterBase with Serial
     else map.values().asScala.map(_.get()).reduce(_ + _)
   }
 
-  def countAt(key: TimeKey) = {
-    val counter = map.subMap(key.interval._1, true, key.interval._2, true).values().asScala
+  def countIn(range: (TimeKey, TimeKey)) = {
+    val counter = map.subMap(range._1, true, range._2, true).values().asScala
     if (counter.isEmpty) 0 else counter.map(_.get()).reduce(_ + _)
   }
 

@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013 Eike Kettner
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.eknet.county
 
 import org.scalatest.FunSuite
@@ -20,8 +36,8 @@ class BasicCounterSuite extends FunSuite with ShouldMatchers {
     c.increment()
 
     c.totalCount should be (7)
-    c.countAt(key) should be (0)
-    c.countAt(key.byDay) should be (7)
+    c.countIn(key.interval) should be (0)
+    c.countIn(key.byDay.interval) should be (7)
   }
 
   test ("more counters") {
@@ -32,12 +48,12 @@ class BasicCounterSuite extends FunSuite with ShouldMatchers {
     c.add(key + 200, 2)
 
     c.totalCount should be (4)
-    c.countAt(key.bySeconds) should be (4)
-    c.countAt(key) should be (1)
-    c.countAt(key.copy(millis = key.millis.map(_ - 50))) should be (0)
-    c.countAt(key.copy(millis = key.millis.map(_ + 50))) should be (0)
-    c.countAt(key.copy(millis = key.millis.map(_ + 100))) should be (1)
-    c.countAt(key.copy(millis = key.millis.map(_ + 200))) should be (2)
+    c.countIn(key.bySeconds.interval) should be (4)
+    c.countIn(key.interval) should be (1)
+    c.countIn(key.copy(millis = key.millis.map(_ - 50)).interval) should be (0)
+    c.countIn(key.copy(millis = key.millis.map(_ + 50)).interval) should be (0)
+    c.countIn(key.copy(millis = key.millis.map(_ + 100)).interval) should be (1)
+    c.countIn(key.copy(millis = key.millis.map(_ + 200)).interval) should be (2)
   }
 
   test ("serialized / deserialize") {

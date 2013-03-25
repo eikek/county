@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013 Eike Kettner
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.eknet.county
 
 import collection.mutable.ListBuffer
@@ -127,8 +143,8 @@ object DefaultCounty {
       self.totalCount
     }
 
-    def countAt(key: TimeKey) = wrapLock(counterLock.readLock()) {
-      self.countAt(key)
+    def countIn(range: (TimeKey, TimeKey)) = wrapLock(counterLock.readLock()) {
+      self.countIn(range)
     }
 
     def reset() {
@@ -156,7 +172,7 @@ object DefaultCounty {
     def decrement() {}
     def add(value: Long) {}
     def totalCount = 0L
-    def countAt(key: TimeKey) = 0L
+    def countIn(range: (TimeKey, TimeKey)) = 0L
     def reset() {}
     def resetTime = 0L
     def lastAccess = 0L
@@ -171,7 +187,7 @@ object DefaultCounty {
     def counters = nodes.map(_.self)
   }
 
-  private class FilterKeyCounty(val self: County, val nodes:List[Tree], fun: String => String) extends ProxyCounty {
+  private[county] class FilterKeyCounty(val self: County, val nodes:List[Tree], fun: String => String) extends ProxyCounty {
 
     private def next(name: String) = {
       val next = nodes.flatMap(_.childList).filter(n => fun(n.name) == name)
@@ -194,7 +210,7 @@ object DefaultCounty {
     }
   }
 
-  private class TransformKeyCounty(val self: County, val nodes: List[Tree], fun: String => String) extends ProxyCounty {
+  private[county] class TransformKeyCounty(val self: County, val nodes: List[Tree], fun: String => String) extends ProxyCounty {
 
     override def apply(name: CounterKey*) = {
       val fn = name.map(n => CounterKey(fun(n.headSegment) :: n.path.tail))

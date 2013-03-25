@@ -20,6 +20,7 @@ import org.eknet.county.CounterKey;
 import org.eknet.county.County;
 import org.eknet.county.TimeKey;
 import scala.Function1;
+import scala.Tuple2;
 import scala.collection.Iterable;
 import scala.collection.JavaConversions$;
 import scala.collection.Seq;
@@ -70,8 +71,12 @@ public class JCounty implements County {
   }
 
   @Override
-  public long countAt(TimeKey key) {
-    return self.countAt(key);
+  public long countIn(Tuple2<TimeKey, TimeKey> range) {
+    return self.countIn(range);
+  }
+
+  public long countIn(TimeKey start, TimeKey end) {
+    return countIn(new Tuple2<TimeKey, TimeKey>(start, end));
   }
 
   @Override
