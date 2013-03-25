@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013 Eike Kettner
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import sbt._
 import Keys._
 import Dependencies._
@@ -15,6 +31,7 @@ object Version {
   val scalaTest = "1.9.1"
   val slf4j = "1.7.4"
   val testng = "6.8"
+  val xchart = "2.1.0"
 }
 
 object Dependencies {
@@ -26,6 +43,7 @@ object Dependencies {
   val scalaTest = "org.scalatest" %% "scalatest" % Version.scalaTest % "test"
   val slf4jApi = "org.slf4j" % "slf4j-api" % Version.slf4j
   val testng = "org.testng" % "testng" % Version.testng % "test"
+  val xchart = "com.xeiam.xchart" % "xchart" % Version.xchart
 }
 
 object RootBuild extends Build {
@@ -36,7 +54,8 @@ object RootBuild extends Build {
     settings = buildSettings
   ) aggregate (
      Api.module,
-     BlueprintsBackend.module
+     BlueprintsBackend.module,
+     XChart.module
   )
 
   val buildSettings = Project.defaultSettings ++ Seq(
@@ -91,4 +110,20 @@ object BlueprintsBackend extends Build {
   )
 
   lazy val deps = Seq(slf4jApi, blueprintsCore, blueprintsOrient, scalaTest)
+}
+
+object XChart extends Build {
+
+  lazy val module = Project(
+    id = "county-xchart",
+    base = file("xchart"),
+    settings = buildSettings
+  ) dependsOn(Api.module)
+
+  lazy val buildSettings = Project.defaultSettings ++ Seq(
+    name := "county-xchart",
+    libraryDependencies ++= deps
+  )
+
+  lazy val deps = Seq(xchart, scalaTest)
 }

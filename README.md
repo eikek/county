@@ -11,7 +11,7 @@ from it. It provides persistent counters as well as in-memory ones and lets you 
 those.
 
 
-## Building block -- the `Counter`
+## Building block -- the *Counter*
 
 The simple entity, everything else is build on top, is the `Counter`. A `Counter` is very
 simple, it only allows to add numeric values. The counter organizes them using a timestamp
@@ -76,7 +76,7 @@ In general, `county(path)` retrieves a node from the tree, creating it if it doe
 The `County` object allows to retrieve a list of children that names the next nodes in the tree. For
 leaf nodes, the list is empty.
 
-## Counter Sets
+### Counter Sets
 
 Specifying more than one path is possible and yields in a composite counter, that will operate on the
 given set of nodes. The same can be achieved by using path patterns with wildcards `*` or `?`.
@@ -89,7 +89,7 @@ would increment the counters `a.b.1` and `a.c.1`. You can use `*` to match any c
 or `?` to match exactly one character. If the path pattern does not match any node, an empty counter
 is returned that cannot be modified.
 
-## Filtering Keys
+### Filtering Keys
 
 It is possible to create a counter that applies a given function to its children:
 
@@ -103,7 +103,7 @@ is collecting all children with even numbers and `even("1")` would collect the o
 Note that the function is applied to existing child nodes and creates a view of them. The line `even("3")`
 would collect nothing and calling `increment()` on it has no effect.
 
-## Transforming Keys
+### Transforming Keys
 
 It's possible to provide a function that is applied when adding new childs. In contrast to `filterKey` this
 is applied to the path argument before the child node is created.
@@ -134,7 +134,7 @@ example above, `county("a.b.c.d").increment()` yields in creating a counter usin
 `coutny("a.d.x").increment()` would create a counter using the fallback `BasicCounterPool`.
 
 
-# Other Examples
+## Other Examples
 
     county("pages.visits.my-webpage-html").increment()
 
@@ -159,3 +159,9 @@ example above, `county("a.b.c.d").increment()` yields in creating a counter usin
     // transform keys: look up the country for an ip and uses the result as real key
     val ipcounter = county("pages.visits.bycountry").transformKey(ip => geolocation(ip))
     ipcounter("80-100-100-1").increment()
+
+
+## Facing the data
+
+The module "county-xchart" uses the [xchart](http://xeiam.com/xchart.jsp) library to plot
+counter data.
