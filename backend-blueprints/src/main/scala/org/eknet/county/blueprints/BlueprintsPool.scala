@@ -4,6 +4,7 @@ import org.eknet.county.{Granularity, CounterPool}
 import com.tinkerpop.blueprints.{Vertex, KeyIndexableGraph}
 import java.security.{MessageDigest, DigestOutputStream}
 import java.io.ByteArrayOutputStream
+import javax.xml.bind.DatatypeConverter
 
 /**
  * Persists all counters in the given graph.
@@ -13,14 +14,14 @@ import java.io.ByteArrayOutputStream
  */
 class BlueprintsPool(val graph: KeyIndexableGraph, val granularity: Granularity) extends CounterPool {
 
-  private val nameIdProp = "name-id"
-  private val nameProp = "name"
+  val nameIdProp = "name-id"
+  val nameProp = "name"
 
   initializeIndexes()
 
   implicit private val g = graph
 
-  private def initializeIndexes() {
+  protected def initializeIndexes() {
     import scala.collection.JavaConversions.asScalaSet
     val set = graph.getIndexedKeys(classOf[Vertex]).filter(k => k == nameIdProp)
     if (!set.contains(nameIdProp)) {
@@ -28,23 +29,26 @@ class BlueprintsPool(val graph: KeyIndexableGraph, val granularity: Granularity)
     }
   }
 
-  private def findVertex(name: String): Option[Vertex] = {
+  protected def findVertex(name: String): Option[Vertex] = {
     val id = digest(name)
     val iter = graph.getVertices(nameIdProp, id).iterator()
     if (iter.hasNext) {
-      if (iter.hasNext) sys.error("More than one vertex for name "+ name)
-      else Some(iter.next())
+      val r = Some(iter.next())
+      if (iter.hasNext) sys.error("More than one vertex for name "+ name) else r
     } else {
       None
     }
   }
 
-  private def digest(str: String): String = {
+  protected def digest(str: String): String = {
     val bout = new ByteArrayOutputStream()
     val out = new DigestOutputStream(bout, MessageDigest.getInstance("MD5"))
     out.write(str.getBytes("UTF-8"))
     out.close()
-    new String(out.getMessageDigest.digest(), "UTF-8")
+    DatatypeConverter.printHexBinary(out.getMessageDigest.digest())
+//    val bytes = out.getMessageDigest.digest()
+//    val bi = new BigInteger(1, bytes)
+//    String.format("%032x", bi)
   }
 
   def getOrCreate(name: String) = {
@@ -69,7 +73,7 @@ class BlueprintsPool(val graph: KeyIndexableGraph, val granularity: Granularity)
     })
   }
 
-  def createCounter(v: Vertex) = {
+  protected def createCounter(v: Vertex) = {
     new VertexCounter(granularity, v, graph)
   }
 }

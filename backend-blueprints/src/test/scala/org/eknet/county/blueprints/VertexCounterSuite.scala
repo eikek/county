@@ -12,18 +12,8 @@ import org.eknet.county.Granularity
  */
 class VertexCounterSuite extends FunSuite with ShouldMatchers {
 
-  def withGraph[A](body: OrientGraph => A): A = {
-    val dir = Files.createTempDirectory("testdb")
-    val g = new OrientGraph("local:"+ dir.toAbsolutePath.toString)
-    try {
-      body(g)
-    } finally {
-      g.shutdown()
-    }
-  }
-
   test ("simple tests") {
-    withGraph { g =>
+    GraphUtil.withGraph { g =>
       var counter = new VertexCounter(Granularity.Millis, g.addVertex(null), g)
       counter.increment()
       counter.increment()
