@@ -14,6 +14,7 @@ object Version {
   val scala = "2.9.2"
   val scalaTest = "1.9.1"
   val slf4j = "1.7.4"
+  val testng = "6.8"
 }
 
 object Dependencies {
@@ -24,6 +25,7 @@ object Dependencies {
   val orientdb = "com.orientechnologies" % "orientdb-core" % Version.orientdb
   val scalaTest = "org.scalatest" %% "scalatest" % Version.scalaTest % "test"
   val slf4jApi = "org.slf4j" % "slf4j-api" % Version.slf4j
+  val testng = "org.testng" % "testng" % Version.testng % "test"
 }
 
 object RootBuild extends Build {
@@ -71,7 +73,7 @@ object Api extends Build {
     libraryDependencies ++= deps
   )
 
-  lazy val deps = Seq(slf4jApi, scalaTest)
+  lazy val deps = Seq(slf4jApi, scalaTest, testng)
   
 }
 

@@ -4,6 +4,7 @@ import collection.mutable.ListBuffer
 import annotation.tailrec
 import org.eknet.county.DefaultCounty.Tree
 import java.util.concurrent.locks.ReentrantReadWriteLock
+import reflect.BeanProperty
 
 /**
  * @author Eike Kettner eike.kettner@gmail.com
@@ -13,6 +14,7 @@ class DefaultCounty extends County with ProxyCounty {
 
   val self: County = new Tree("_root_", ListBuffer(), factory)
 
+  @BeanProperty
   var counterFactories: List[(String, CounterPool)] = List("**" -> new BasicCounterPool)
 
   private def factory(path: CounterKey) = createCounter(counterFactories)(path)

@@ -57,23 +57,23 @@ class BlueprintsPool(val graph: KeyIndexableGraph, val granularity: Granularity)
         val v = graph.addVertex(null)
         v.setProperty(nameIdProp, digest(name))
         v.setProperty(nameProp, name)
-        createCounter(v)
+        createCounter(name, v)
       }
     }
   }
 
   def find(name: String) = withTx {
-    findVertex(name).map(v => createCounter(v))
+    findVertex(name).map(v => createCounter(name, v))
   }
 
   def remove(name: String) = withTx {
     findVertex(name).map(v => {
       graph.removeVertex(v)
-      createCounter(v)
+      createCounter(name, v)
     })
   }
 
-  protected def createCounter(v: Vertex) = {
+  protected def createCounter(name: String, v: Vertex) = {
     new VertexCounter(granularity, v, graph)
   }
 }

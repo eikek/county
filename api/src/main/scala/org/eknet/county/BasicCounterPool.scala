@@ -11,7 +11,7 @@ class BasicCounterPool(granularity: Granularity = Granularity.Minute) extends Co
   private val map = new ConcurrentHashMap[String, Counter]()
 
   def getOrCreate(name: String) = find(name) getOrElse {
-    val c = createCounter()
+    val c = createCounter(name)
     val old = map.putIfAbsent(name, c)
     if (old == null) c else old
   }
@@ -20,5 +20,5 @@ class BasicCounterPool(granularity: Granularity = Granularity.Minute) extends Co
 
   def remove(name: String) = Option(map.remove(name))
 
-  def createCounter() = new BasicCounter(granularity)
+  def createCounter(name: String) = new BasicCounter(granularity)
 }

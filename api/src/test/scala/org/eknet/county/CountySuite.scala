@@ -24,7 +24,6 @@ class CountySuite extends FunSuite with ShouldMatchers {
 
     val c = county("a.b").filterKey(s => s+"1")
     c("d1").totalCount should be (1)
-    toString
   }
 
   test ("resolve pools") {
