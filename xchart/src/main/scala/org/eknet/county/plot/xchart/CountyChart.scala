@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.eknet.county.face.xchart
+package org.eknet.county.plot.xchart
 
 import org.eknet.county._
 import com.xeiam.xchart.Chart
@@ -58,7 +58,7 @@ import com.xeiam.xchart.StyleManager.LegendPosition
  *
  * Usage: Import the `CountyChart._` or just the `CounterChart.apply` function. This
  * function is annotated with `implicit` and wraps your [[org.eknet.county.County]] into
- * a [[org.eknet.county.face.xchart.CountyChart]] which makes the two methods `createChart`
+ * a [[org.eknet.county.plot.xchart.CountyChart]] which makes the two methods `createChart`
  * and `createCounterChart` available.
  *
  * @author Eike Kettner eike.kettner@gmail.com

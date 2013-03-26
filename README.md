@@ -45,9 +45,9 @@ counters by handing in a path of names. For example:
 
 creates a linked list with nodes `a`, `b` and `1` and returns a counter (all lines are
 equivalent). The statement `county("a")` returns a new `County` of name `a` and adds it
-to its child list. The next time `county("a")` is called, it returns the previously created
-element. A shortcut is to specify the whole path as a string, where segments are separated
-by dots `.`.  Modifying the counter
+to the child list of the root node. The next time `county("a")` is called, it returns the
+previously created element. A shortcut is to specify the whole path as a string, where
+segments are separated by dots `.`.  Modifying the counter
 
     county("a.b.1").increment()
 
@@ -74,7 +74,7 @@ its children. That means an inner node's value is the sum of its children. For t
     county("a.b").totalCount
 
 would return `3`. Modifying an inner node results in modifying all its children recursively. Thus the
-counters of all leaf reachable from the inner node are modified. Once a leaf node has been initialized
+counters of all leafs reachable from the inner node are modified. Once a leaf node has been initialized
 with a real counter, it stays a leaf node. It is not possible to add another node to it:
 
     county("a.b.1")             // creates three linked nodes 'a'->'b'->'1'. The last node is uninitialized
@@ -178,14 +178,50 @@ any number of characters but the boundary character and `?` to match any single 
     ipcounter("80-100-100-1").increment()
 
 
-## Facing the data
+## Plotting the data
 
 The module "county-xchart" uses the [xchart](http://xeiam.com/xchart.jsp) library to plot
 counter data.
 
+When creating a chart for a `Counter`:
+
+* x-axis: the timestamp formatted as date
+* y-axis: the `countIn(key.interval)` value
+* `range` option: to include only those keys within the range (inclusive)
+* `resolution` option: consolidate the keys by mapping timestamps to more
+   coarse timestamps. For example: map counters of every minute to counters
+   of a day or week
+* `compact` option: a `CompositeCounter` is treated like a single counter
+  if `compact == true`. If set to `false`, then every internal counter is
+  added to the same chart.
+* 0 values are removed from the chart (means no measure point)
+
+When creating a chart for a `County`:
+
+* x-axis: the names of the child nodes
+* y-axis: either the total count or the value of `countIn()`
+  of the child counter
+* `range` option: used as argument for `countIn()` when providing values for
+  the y-axis. If not set, `totalCount` is used
+* `resolution` option: not used here
+* `compact` option: a `CompositeCounty` is treated like a single county, if
+  `compact == true`. If set to `false` every internal `County` is added to the graph
+* If the `County` has no children, it is treated as a single `Counter`
+
+The options allow to provide a function to further customize the chart. This
+function is applied as the last step, after the data has been added. Use it
+to customize the style of the chart.
+
+Import the `CountyChart._` or just the `CounterChart.apply` function. This function
+is annotated with `implicit` and wraps your `County` into a `CountyChart` which makes
+two methods available: `createChart` and `createCounterChart`.
+
+![example chart](https://github.com/eikek/county/raw/master/screen1.png)
+
+
 ## Java Api
 
-There is a thin Java wrapper to make using county from Java less pain. It just wraps some odd 
+There is a thin Java wrapper to make using county from Java less painful. It just wraps some odd
 calls to scala objects. When using county from java, you must add the scala library to the
 dependencies.
 

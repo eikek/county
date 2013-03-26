@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.eknet.county.face.xchart
+package org.eknet.county.plot.xchart
 
 import com.xeiam.xchart.{ChartBuilder, SwingWrapper, QuickChart}
 import com.xeiam.xchart.StyleManager.{ChartTheme, LegendPosition, ChartType}
@@ -72,7 +72,7 @@ object ChartPlay extends App {
     TimeKey(c.getTimeInMillis)
   }
 
-  val chartopts = ChartOptions(width = 500, range = Some(TimeKey.now.byMonth.interval), compact = false)
+  val chartopts = ChartOptions(width = 500, range = Some(TimeKey.now.byMonth.interval), compact = false, title = "Page Visits")
   county("app.firefox", "app.chrome").createChart(chartopts).display()
 
 

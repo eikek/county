@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.eknet.county.face.xchart
+package org.eknet.county.plot.xchart
 
 import com.xeiam.xchart.{BitmapEncoder, SwingWrapper, Chart}
 import java.nio.file.Path
