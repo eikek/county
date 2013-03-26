@@ -95,7 +95,7 @@ object Api extends Build {
     libraryDependencies ++= deps
   )
 
-  lazy val deps = Seq(slf4jApi, scalaTest, testng, derby, slf4jSimple)
+  lazy val deps = Seq(scalaTest, testng, derby, slf4jSimple)
   
 }
 
@@ -112,7 +112,7 @@ object BlueprintsBackend extends Build {
     libraryDependencies ++= deps
   )
 
-  lazy val deps = Seq(slf4jApi, blueprintsOrient, scalaTest, blueprintsCore)
+  lazy val deps = Seq(blueprintsOrient, scalaTest, blueprintsCore)
 }
 
 object XChart extends Build {
