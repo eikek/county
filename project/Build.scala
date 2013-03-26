@@ -24,6 +24,7 @@ object Resolvers {
 
 object Version {
   val blueprints = "2.3.0"
+  val derby = "10.9.1.0"
   val grizzled = "0.6.10"
   val logback = "1.0.10"
   val orientdb = "1.3.0"
@@ -37,6 +38,7 @@ object Version {
 object Dependencies {
   val blueprintsCore = "com.tinkerpop.blueprints" % "blueprints-core" % Version.blueprints % "provided" intransitive()
   val blueprintsOrient = "com.tinkerpop.blueprints" % "blueprints-orient-graph" % Version.blueprints % "test"
+  val derby = "org.apache.derby" % "derby" % Version.derby % "test"
   val grizzledSlf4j = "org.clapper" %% "grizzled-slf4j" % Version.grizzled exclude("org.slf4j", "slf4j-api") //scala 2.9.2 only
   val logbackClassic = "ch.qos.logback" % "logback-classic" % Version.logback  exclude("org.slf4j", "slf4j-api")
   val orientdb = "com.orientechnologies" % "orientdb-core" % Version.orientdb
@@ -92,7 +94,7 @@ object Api extends Build {
     libraryDependencies ++= deps
   )
 
-  lazy val deps = Seq(slf4jApi, scalaTest, testng)
+  lazy val deps = Seq(slf4jApi, scalaTest, testng, derby)
   
 }
 
@@ -109,7 +111,7 @@ object BlueprintsBackend extends Build {
     libraryDependencies ++= deps
   )
 
-  lazy val deps = Seq(slf4jApi, blueprintsCore, blueprintsOrient, scalaTest)
+  lazy val deps = Seq(slf4jApi, blueprintsOrient, scalaTest, blueprintsCore)
 }
 
 object XChart extends Build {

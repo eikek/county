@@ -10,5 +10,5 @@ trait CounterPool {
 
    def find(name: String): Option[Counter]
 
-   def remove(name: String): Option[Counter]
+   def remove(name: String): Boolean
  }

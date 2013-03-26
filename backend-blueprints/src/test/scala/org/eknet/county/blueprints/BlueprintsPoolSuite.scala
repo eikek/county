@@ -29,9 +29,9 @@ class BlueprintsPoolSuite extends FunSuite with ShouldMatchers {
 
       c13.get.totalCount should be (1)
 
-      pool.remove("sdfsdf") should be (None)
+      pool.remove("sdfsdf") should be (false)
       val rc = pool.remove("hello-counter")
-      rc should not be (None)
+      rc should be (true)
       pool.find("hello-counter") should be (None)
     }
   }

@@ -70,7 +70,7 @@ class BlueprintsPool(val graph: KeyIndexableGraph, val granularity: Granularity)
     findVertex(name).map(v => {
       graph.removeVertex(v)
       createCounter(name, v)
-    })
+    }).isDefined
   }
 
   protected def createCounter(name: String, v: Vertex) = {

@@ -18,7 +18,7 @@ class BasicCounterPool(granularity: Granularity = Granularity.Minute) extends Co
 
   def find(name: String) = Option(map.get(name))
 
-  def remove(name: String) = Option(map.remove(name))
+  def remove(name: String) = Option(map.remove(name)).isDefined
 
   def createCounter(name: String) = new BasicCounter(granularity)
 }
