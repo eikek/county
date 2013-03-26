@@ -3,7 +3,7 @@
 County is a library written in Scala that aims to provide flexible and easy to use ways
 to count things. Counters are often used in all sorts of applications, ususally to create
 a simple kind of statistics, like the number of visits to a web page, number of failed or
-successful logins etc. From there it often grows to manage counts by username or ip address
+successful logins etc. It can quickly grow to manage counts by username or ip address
 maybe to find ips that initiate brute force attacks.
 
 County provides an API to easily count all kind of things and create some simple statistics
@@ -14,12 +14,12 @@ those.
 ## Building block -- the *Counter*
 
 The simple entity, everything else is build on top, is the `Counter`. A `Counter` is very
-simple, it only allows to add numeric values. The counter organizes them using a timestamp
-that specifies the point in time the counter was modified. In other words, there exists
-a numeric value for one timestamp. that is incremented (or decremented, resp) if the counter
-is modified by multiple threads at the same time. You can define a `Granularity` to normalize
-the timestamp keys, such that all counts within one second, minute or month are accumulated at
-one value.
+simple, it only allows to add numeric values. A counter additionally maps the timestamp
+of modification to the new value. So it really is a map of timestamps to numeric values.
+Since it is usually not sensible to have a counter per millisecond, a `Granulariy` can
+be specified to normalize the timestamp. It may, for example, zero-out the millisecond, 
+second and minute parts of a timestamp. This can be used to control the size of the 
+counter map.
 
 The counter itself does not define _what_ it counts, it just manages some numbers. The
 counter lets you read its total count as well as counts in a time range. For example, you
@@ -44,12 +44,16 @@ counters by handing in a path of names. For example:
     val b = county("a.b"); b("1")
 
 creates a linked list with nodes `a`, `b` and `1` and returns a counter (all lines are
-equivalent). Modifying the counter
+equivalent). The statement `county("a")` returns a new `County` of name `a` and adds it
+to its child list. The next time `county("a")` is called, it returns the previously created
+element. A shortcut is to specify the whole path as a string, where segments are separated
+by dots `.`.  Modifying the counter
 
     county("a.b.1").increment()
 
-yields in modifying the counter that is attached to node `1`. More counters can be added the
-same way:
+first selects the node `1` and calls `increment()` on it. If this is the last node, it is
+now initialized with a new counter and `increment()` is called on this. More counters 
+can be added the same way:
 
     county("a.b.2").increment()
     county("a.b.3").increment()
@@ -61,7 +65,7 @@ Now there is a simple tree
        a
        |`.
        b  c
-     .´|`- `.
+     .´|`. `.
     1  2  3  1
 
 where the leaf nodes have real counters attached. Inner nodes are composite counters that delegate to
@@ -69,7 +73,18 @@ its children. That means an inner node's value is the sum of its children. For t
 
     county("a.b").totalCount
 
-would return `3`.
+would return `3`. Modifying an inner node results in modifying all its children recursively. Thus the
+counters of all leaf reachable from the inner node are modified. Once a leaf node has been initialized
+with a real counter, it stays a leaf node. It is not possible to add another node to it:
+
+    county("a.b.1")             // creates three linked nodes 'a'->'b'->'1'. The last node is uninitialized
+    county("a.b.1").increment() // initializes node '1' and increments its new counter
+    county("a.b.1.2")           // ERROR cannot create a child of a leaf node
+
+but the following is ok, since the last node has not been initialized:
+
+    county("a.b.1")
+    county("a.b.1.2")
 
 In general, `county(path)` retrieves a node from the tree, creating it if it does not exist yet.
 
@@ -94,7 +109,7 @@ is returned that cannot be modified.
 It is possible to create a counter that applies a given function to its children:
 
     val even = county("a.b").filterKeys(s => (s.toInt % 2).toString)
-    event("0").increment()
+    even("0").increment()
 
 The function is applied to the children of node `b`, which are numbers `1`, `2` and `3`. The function
 get the remainder of the division by 2 of the argument. This means, that the counter created by `even("0")`
@@ -112,14 +127,14 @@ is applied to the path argument before the child node is created.
     c("word").increment()
     c("letter").increment()
 
-The function adds an extra 's' character to its argument, thus `c("word")` is creating a new child node
-of name `words`. Its not just a view of existing children, like `filterKey`.
+The function adds an extra 's' character to its argument, thus `c("word")` is equivalent to `county("a.b.words")`. 
+Its not just a view of existing children, like `filterKey`.
 
 ## Controlling Counter Implementations
 
-A `CounterPool` is a generic interface for managing counters by names. The `BasicCounterPool` manages
-a in-memory map and there is also a [blueprints](http://blueprints.tinkerpop.com/) backend that stores
-the counter data in a graph database.
+A `CounterPool` is a generic interface for managing counters by names. The `BasicCounterPool` manages a 
+in-memory map and there are also jdbc and [blueprints](http://blueprints.tinkerpop.com/) backends to store
+counters in a database.
 
 Those pools can be registered with `County` objects using a glob-style path:
 
@@ -133,6 +148,8 @@ create the counter. By default the list contains a fallback mapping `"**" -> Bas
 example above, `county("a.b.c.d").increment()` yields in creating a counter using the `BlueprintsPool` while
 `coutny("a.d.x").increment()` would create a counter using the fallback `BasicCounterPool`.
 
+The path pattern can contain `**` to match everything, including the boundary character `.`, `*` to match
+any number of characters but the boundary character and `?` to match any single character.
 
 ## Other Examples
 
@@ -165,3 +182,11 @@ example above, `county("a.b.c.d").increment()` yields in creating a counter usin
 
 The module "county-xchart" uses the [xchart](http://xeiam.com/xchart.jsp) library to plot
 counter data.
+
+## Java Api
+
+There is a thin Java wrapper to make using county from Java less pain. It just wraps some odd 
+calls to scala objects. When using county from java, you must add the scala library to the
+dependencies.
+
+The Java Api is located in the packate `org.eknet.countyj`.
