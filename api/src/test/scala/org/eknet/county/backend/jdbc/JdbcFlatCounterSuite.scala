@@ -16,22 +16,15 @@
 
 package org.eknet.county.backend.jdbc
 
-import org.scalatest.{BeforeAndAfter, FunSuite}
-import org.scalatest.matchers.ShouldMatchers
-import org.apache.derby.jdbc.EmbeddedDataSource
-import java.nio.file.{FileVisitResult, Path, SimpleFileVisitor, Files}
-import javax.sql.DataSource
-import org.eknet.county.{AbstractPoolSuite, Granularity}
-import java.nio.file.attribute.BasicFileAttributes
-import java.io.IOException
+import org.eknet.county.{Granularity, AbstractCounterSuite}
+import java.nio.file.Path
+import org.scalatest.BeforeAndAfter
 
 /**
- *
  * @author Eike Kettner eike.kettner@gmail.com
- * @since 26.03.13 19:38
- * 
+ * @since 26.03.13 19:58
  */
-class JdbcFlatPoolSuite extends AbstractPoolSuite with DerbyFixture with BeforeAndAfter {
+class JdbcFlatCounterSuite extends AbstractCounterSuite with DerbyFixture with BeforeAndAfter {
 
   private var dbname: Path = null
 
@@ -43,8 +36,10 @@ class JdbcFlatPoolSuite extends AbstractPoolSuite with DerbyFixture with BeforeA
     removeDir(dbname)
   }
 
-  def createPool() = {
+  def createCounter(gran: Granularity) = {
     val ds = createDataSource(dbname)
-    new JdbcFlatCounterPool(Granularity.Millis, ds)
+    val pool = new JdbcFlatCounterPool(gran, ds)
+    pool.getOrCreate("testcounter")
   }
+
 }

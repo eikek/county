@@ -18,9 +18,9 @@ package org.eknet.county.backend.jdbc
 
 import org.eknet.county.{CounterPool, Granularity}
 import javax.sql.DataSource
-import java.io.ByteArrayOutputStream
-import java.security.{MessageDigest, DigestOutputStream}
-import javax.xml.bind.DatatypeConverter
+import org.eknet.county
+import county.backend.Digest
+import reflect.BeanProperty
 
 /**
  * This pool creates counters that are persisted in a database using JDBC. The pool
@@ -33,16 +33,14 @@ import javax.xml.bind.DatatypeConverter
  */
 class JdbcFlatCounterPool(val granularity: Granularity, dataSource: DataSource) extends CounterPool {
 
-  var tableNamePrefix = "county_"
-  var ddl = SchemaDDL(
+  @BeanProperty var tableNamePrefix = "county_"
+  @BeanProperty var ddl = SchemaDDL(
     Seq("""
       |CREATE TABLE %s (
       |  TIMEKEY NUMERIC(20,0) NOT NULL PRIMARY KEY,
       |  COUNTERVALUE NUMERIC(20,0) NOT NULL
       |)
-    """.stripMargin),
-    "DROP TABLE %s",
-    "SELECT 1 FROM %s"
+    """.stripMargin)
   )
 
   implicit private val ds = dataSource
@@ -68,18 +66,10 @@ class JdbcFlatCounterPool(val granularity: Granularity, dataSource: DataSource) 
     }
   }
 
-  protected def digest(str: String): String = {
-    val bout = new ByteArrayOutputStream()
-    val out = new DigestOutputStream(bout, MessageDigest.getInstance("MD5"))
-    out.write(str.getBytes("UTF-8"))
-    out.close()
-    DatatypeConverter.printHexBinary(out.getMessageDigest.digest())
-  }
-
   protected def createCounter(name: String) = {
     val table = createTableName(name)
-    new JdbcCounterTable(granularity, table, dataSource, ddl)
+    new JdbcFlatCounter(granularity, table, dataSource, ddl)
   }
 
-  protected def createTableName(name: String) = tableNamePrefix + digest(name)
+  protected def createTableName(name: String) = tableNamePrefix + Digest.digest(name)
 }

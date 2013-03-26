@@ -44,6 +44,7 @@ object Dependencies {
   val orientdb = "com.orientechnologies" % "orientdb-core" % Version.orientdb
   val scalaTest = "org.scalatest" %% "scalatest" % Version.scalaTest % "test"
   val slf4jApi = "org.slf4j" % "slf4j-api" % Version.slf4j
+  val slf4jSimple = "org.slf4j" % "slf4j-simple" % Version.slf4j % "test"
   val testng = "org.testng" % "testng" % Version.testng % "test"
   val xchart = "com.xeiam.xchart" % "xchart" % Version.xchart
 }
@@ -94,7 +95,7 @@ object Api extends Build {
     libraryDependencies ++= deps
   )
 
-  lazy val deps = Seq(slf4jApi, scalaTest, testng, derby)
+  lazy val deps = Seq(slf4jApi, scalaTest, testng, derby, slf4jSimple)
   
 }
 
@@ -104,7 +105,7 @@ object BlueprintsBackend extends Build {
     id = "county-backend-blueprints",
     base = file("backend-blueprints"),
     settings = buildSettings
-  ) dependsOn(Api.module)
+  ) dependsOn(Api.module, Api.module % "test->test")
 
   lazy val buildSettings = Project.defaultSettings ++ Seq(
     name := "county-backend-blueprints",

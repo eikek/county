@@ -1,10 +1,8 @@
 package org.eknet.county.blueprints
 
 import org.eknet.county.{Granularity, CounterPool}
-import com.tinkerpop.blueprints.{Vertex, KeyIndexableGraph}
-import java.security.{MessageDigest, DigestOutputStream}
-import java.io.ByteArrayOutputStream
-import javax.xml.bind.DatatypeConverter
+import com.tinkerpop.blueprints.{Edge, Vertex, KeyIndexableGraph}
+import org.eknet.county.backend.Digest
 
 /**
  * Persists all counters in the given graph.
@@ -14,23 +12,28 @@ import javax.xml.bind.DatatypeConverter
  */
 class BlueprintsPool(val graph: KeyIndexableGraph, val granularity: Granularity) extends CounterPool {
 
-  val nameIdProp = "name-id"
-  val nameProp = "name"
-
-  initializeIndexes()
+  import BlueprintsPool.nameIdProp
+  import BlueprintsPool.timestampProp
+  import BlueprintsPool.nameProp
 
   implicit private val g = graph
 
+  initializeIndexes()
+
   protected def initializeIndexes() {
     import scala.collection.JavaConversions.asScalaSet
-    val set = graph.getIndexedKeys(classOf[Vertex]).filter(k => k == nameIdProp)
-    if (!set.contains(nameIdProp)) {
-      graph.createKeyIndex(nameIdProp, classOf[Vertex])
+    graph.getIndexedKeys(classOf[Vertex]).filter(k => k == nameIdProp) match {
+      case set if (set.isEmpty) => graph.createKeyIndex(nameIdProp, classOf[Vertex])
+      case _ =>
+    }
+    graph.getIndexedKeys(classOf[Edge]).filter(k => k == timestampProp) match {
+      case set if (set.isEmpty) => graph.createKeyIndex(timestampProp, classOf[Edge])
+      case _ =>
     }
   }
 
   protected def findVertex(name: String): Option[Vertex] = {
-    val id = digest(name)
+    val id = createNodeId(name)
     val iter = graph.getVertices(nameIdProp, id).iterator()
     if (iter.hasNext) {
       val r = Some(iter.next())
@@ -40,22 +43,11 @@ class BlueprintsPool(val graph: KeyIndexableGraph, val granularity: Granularity)
     }
   }
 
-  protected def digest(str: String): String = {
-    val bout = new ByteArrayOutputStream()
-    val out = new DigestOutputStream(bout, MessageDigest.getInstance("MD5"))
-    out.write(str.getBytes("UTF-8"))
-    out.close()
-    DatatypeConverter.printHexBinary(out.getMessageDigest.digest())
-//    val bytes = out.getMessageDigest.digest()
-//    val bi = new BigInteger(1, bytes)
-//    String.format("%032x", bi)
-  }
-
   def getOrCreate(name: String) = {
     find(name) getOrElse {
       withTx {
         val v = graph.addVertex(null)
-        v.setProperty(nameIdProp, digest(name))
+        v.setProperty(nameIdProp, createNodeId(name))
         v.setProperty(nameProp, name)
         createCounter(name, v)
       }
@@ -73,7 +65,15 @@ class BlueprintsPool(val graph: KeyIndexableGraph, val granularity: Granularity)
     }).isDefined
   }
 
+  protected def createNodeId(name: String) = Digest.digest(name)
+
   protected def createCounter(name: String, v: Vertex) = {
     new VertexCounter(granularity, v, graph)
   }
+}
+
+object BlueprintsPool {
+  val nameIdProp = "nameid"
+  val timestampProp = "timestampid"
+  val nameProp = "name"
 }

@@ -14,37 +14,36 @@
  * limitations under the License.
  */
 
-package org.eknet.county.backend.jdbc
+package org.eknet.county
 
-import org.scalatest.{BeforeAndAfter, FunSuite}
-import org.scalatest.matchers.ShouldMatchers
-import org.apache.derby.jdbc.EmbeddedDataSource
-import java.nio.file.{FileVisitResult, Path, SimpleFileVisitor, Files}
-import javax.sql.DataSource
-import org.eknet.county.{AbstractPoolSuite, Granularity}
+import java.nio.file.{FileVisitResult, SimpleFileVisitor, Files, Path}
 import java.nio.file.attribute.BasicFileAttributes
 import java.io.IOException
 
 /**
- *
  * @author Eike Kettner eike.kettner@gmail.com
- * @since 26.03.13 19:38
- * 
+ * @since 26.03.13 20:15
  */
-class JdbcFlatPoolSuite extends AbstractPoolSuite with DerbyFixture with BeforeAndAfter {
+trait FileUtils {
 
-  private var dbname: Path = null
+  def removeDir(path: Path) {
+    if (Files.exists(path)) {
+      Files.walkFileTree(path, new SimpleFileVisitor[Path] {
+        override def visitFile(file: Path, attrs: BasicFileAttributes) = {
+          Files.delete(file)
+          FileVisitResult.CONTINUE
+        }
 
-  before {
-    dbname = getUniqueDatabasename
+        override def postVisitDirectory(dir: Path, exc: IOException) = {
+          if (exc == null) {
+            Files.delete(dir)
+            FileVisitResult.CONTINUE
+          } else {
+            throw exc
+          }
+        }
+      })
+    }
   }
 
-  after {
-    removeDir(dbname)
-  }
-
-  def createPool() = {
-    val ds = createDataSource(dbname)
-    new JdbcFlatCounterPool(Granularity.Millis, ds)
-  }
 }

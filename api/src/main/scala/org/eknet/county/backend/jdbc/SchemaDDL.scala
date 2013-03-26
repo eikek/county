@@ -25,7 +25,7 @@ import javax.sql.DataSource
  * @since 26.03.13 18:39
  * 
  */
-case class SchemaDDL(createTable: Seq[String], dropTableSQL: String, testSQL: String) {
+case class SchemaDDL(createTable: Seq[String], dropTableSQL: String = "DROP TABLE %s", testSQL: String = "SELECT 1 FROM %s") {
 
   def schemaExists(table: String)(implicit ds: DataSource) = {
     withConnection { conn =>
@@ -38,17 +38,17 @@ case class SchemaDDL(createTable: Seq[String], dropTableSQL: String, testSQL: St
     }
   }
 
-  def createSchema(table: String)(implicit ds: DataSource) {
+  def createSchema()(implicit ds: DataSource) {
     withTx { conn =>
-      createTable.map(_.format(table)) map { sql =>
+      createTable map { sql =>
         conn.createStatement().executeUpdate(sql)
       }
     }
   }
 
-  def dropTable(table: String)(implicit ds: DataSource) {
+  def dropTable(args: String)(implicit ds: DataSource) {
     withTx { conn =>
-      conn.prepareStatement(dropTableSQL.format(table)).executeUpdate()
+      conn.prepareStatement(dropTableSQL.format(args)).executeUpdate()
     }
   }
 }

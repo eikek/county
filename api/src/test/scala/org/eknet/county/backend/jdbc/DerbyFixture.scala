@@ -16,35 +16,34 @@
 
 package org.eknet.county.backend.jdbc
 
-import org.scalatest.{BeforeAndAfter, FunSuite}
-import org.scalatest.matchers.ShouldMatchers
-import org.apache.derby.jdbc.EmbeddedDataSource
-import java.nio.file.{FileVisitResult, Path, SimpleFileVisitor, Files}
 import javax.sql.DataSource
-import org.eknet.county.{AbstractPoolSuite, Granularity}
-import java.nio.file.attribute.BasicFileAttributes
-import java.io.IOException
+import org.apache.derby.jdbc.EmbeddedDataSource
+import org.eknet.county.FileUtils
+import java.nio.file.{Path, Files}
+import java.util.UUID
 
 /**
- *
  * @author Eike Kettner eike.kettner@gmail.com
- * @since 26.03.13 19:38
- * 
+ * @since 26.03.13 19:58
  */
-class JdbcFlatPoolSuite extends AbstractPoolSuite with DerbyFixture with BeforeAndAfter {
+trait DerbyFixture extends FileUtils {
 
-  private var dbname: Path = null
-
-  before {
-    dbname = getUniqueDatabasename
+  def getUniqueDatabasename = {
+    val tempdir = Files.createTempDirectory("testderby")
+    Files.delete(tempdir)
+    tempdir.resolveSibling(UUID.randomUUID().toString)
   }
 
-  after {
-    removeDir(dbname)
+  def createDataSource(name: Path) = {
+    val ds = new EmbeddedDataSource
+    ds.setDatabaseName(name.toString)
+    ds.setCreateDatabase("create")
+    ds
   }
 
-  def createPool() = {
-    val ds = createDataSource(dbname)
-    new JdbcFlatCounterPool(Granularity.Millis, ds)
+  def withDataSource[A](name: Path)(body: DataSource => A): A = {
+    val ds = createDataSource(name)
+    body(ds)
   }
+
 }

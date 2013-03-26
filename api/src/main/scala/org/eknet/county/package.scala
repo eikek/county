@@ -2,6 +2,9 @@ package org.eknet
 
 import java.util.concurrent.locks.ReentrantReadWriteLock.{WriteLock, ReadLock}
 import java.util.concurrent.locks.Lock
+import java.io.ByteArrayOutputStream
+import java.security.{MessageDigest, DigestOutputStream}
+import javax.xml.bind.DatatypeConverter
 
 /**
  *

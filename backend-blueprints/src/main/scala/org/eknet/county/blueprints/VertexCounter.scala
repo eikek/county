@@ -16,7 +16,7 @@
 
 package org.eknet.county.blueprints
 
-import com.tinkerpop.blueprints.{Graph, Vertex}
+import com.tinkerpop.blueprints.{Direction, Graph, Vertex}
 import org.eknet.county.{Granularity, TimeKey, CounterBase}
 
 /**
@@ -24,7 +24,7 @@ import org.eknet.county.{Granularity, TimeKey, CounterBase}
  * @since 24.03.13 14:16
  */
 class VertexCounter(gran: Granularity, val vertex: Vertex, graph: Graph) extends CounterBase {
-  import scala.collection.JavaConversions.asScalaSet
+  import scala.collection.JavaConversions._
 
   implicit private val g = graph
 
@@ -33,34 +33,58 @@ class VertexCounter(gran: Granularity, val vertex: Vertex, graph: Graph) extends
 
   private val timePrefix = "county_time_"
 
-  private def timeKeys = vertex.getPropertyKeys.filter(n => n.startsWith(timePrefix)).toList
+  private val counterValue = "countervalue"
+  private val timeKey = "timekey"
+
+  withTx {
+    vertex.setProperty(lastReset, System.currentTimeMillis())
+    vertex.setProperty(lastAccessProp, 0L)
+  }
 
   def add(when: TimeKey, value: Long) {
-    val normed = gran.keyFor(when.timestamp)
-    withTx {
-      val key = timePrefix + normed.timestamp
-      val cur = Option(vertex.getProperty(key).asInstanceOf[Long]).getOrElse(0L)
-      vertex.setProperty(key, cur + value)
-      vertex.setProperty(lastAccessProp, System.currentTimeMillis())
+    if (value != 0) {
+      val normed = gran.keyFor(when.timestamp).timestamp
+      withTx {
+        vertex.getVertices(Direction.OUT, normed+"").toList match {
+          case a::Nil => {
+            val cur = a.getProperty[Long](counterValue)
+            a.setProperty(timeKey, normed)
+            if (cur == null) {
+              a.setProperty(counterValue, value)
+            } else {
+              a.setProperty(counterValue, cur + value)
+            }
+          }
+          case Nil => {
+            val a = graph.addVertex(null)
+            graph.addEdge(null, vertex, a, normed+"")
+            a.setProperty(counterValue, value)
+            a.setProperty(timeKey, normed)
+          }
+          case _ => sys.error("Too many nodes.")
+        }
+        vertex.setProperty(lastAccessProp, System.currentTimeMillis())
+      }
     }
   }
 
   def totalCount = withTx {
-    val list = timeKeys map { p => vertex.getProperty(p).asInstanceOf[Long] }
+    val list = vertex.getVertices(Direction.OUT).map(v => v.getProperty[Long](counterValue))
     if (list.isEmpty) 0 else list.reduce(_ + _)
   }
 
   def countIn(range: (TimeKey, TimeKey)) = {
-    val list = keys.filter(tk => tk >= range._1 && tk <= range._2)
-      .map { k => withTx(vertex.getProperty(timePrefix+k).asInstanceOf[Long]) }
-
+    val list = vertex.getVertices(Direction.OUT)
+      .withFilter(v => v.getProperty[Long](timeKey) >= range._1.timestamp && v.getProperty[Long](timeKey) <= range._2.timestamp)
+      .map(v => v.getProperty[Long](counterValue))
     if (list.isEmpty) 0 else list.reduce(_ + _)
   }
 
   def reset() {
     withTx {
+      val list = vertex.getVertices(Direction.OUT)
+      list.foreach(v => graph.removeVertex(v))
       vertex.setProperty(lastReset, System.currentTimeMillis())
-      timeKeys map { p => vertex.removeProperty(p).asInstanceOf[Long] }
     }
   }
 
@@ -73,7 +97,7 @@ class VertexCounter(gran: Granularity, val vertex: Vertex, graph: Graph) extends
   }
 
   def keys = withTx {
-    val list = timeKeys map { p => p.substring(timePrefix.length) }
-    list.map(m => TimeKey(m.toLong)).toList.sorted
+    vertex.getVertices(Direction.OUT)
+      .map(v => TimeKey(v.getProperty[Long](timeKey)))
   }
 }

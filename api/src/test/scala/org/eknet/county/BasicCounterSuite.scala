@@ -25,36 +25,8 @@ import java.nio.file.Files
  * @author Eike Kettner eike.kettner@gmail.com
  * @since 23.03.13 00:06
  */
-class BasicCounterSuite extends FunSuite with ShouldMatchers {
+class BasicCounterSuite extends AbstractCounterSuite {
 
-  test ("simple counting") {
-    val c = new BasicCounter(Granularity.Second)
-    c.increment()
-    val key = TimeKey.now
-    c.increment()
-    c.add(4)
-    c.increment()
-
-    c.totalCount should be (7)
-    c.countIn(key.interval) should be (0)
-    c.countIn(key.byDay.interval) should be (7)
-  }
-
-  test ("more counters") {
-    val c = new BasicCounter(Granularity.Millis)
-    val key = TimeKey.now
-    c.add(key, 1)
-    c.add(key + 100, 1)
-    c.add(key + 200, 2)
-
-    c.totalCount should be (4)
-    c.countIn(key.bySeconds.interval) should be (4)
-    c.countIn(key.interval) should be (1)
-    c.countIn(key.copy(millis = key.millis.map(_ - 50)).interval) should be (0)
-    c.countIn(key.copy(millis = key.millis.map(_ + 50)).interval) should be (0)
-    c.countIn(key.copy(millis = key.millis.map(_ + 100)).interval) should be (1)
-    c.countIn(key.copy(millis = key.millis.map(_ + 200)).interval) should be (2)
-  }
 
   test ("serialized / deserialize") {
     val c = new BasicCounter(Granularity.Millis)
@@ -93,17 +65,5 @@ class BasicCounterSuite extends FunSuite with ShouldMatchers {
     r.totalCount should be (4)
   }
 
-  test ("dropping counter") {
-    val counter = new DroppingCounter(new BasicCounter(Granularity.Millis), 100L)
-    counter.increment()
-    counter.increment()
-    counter.increment()
-
-    counter.totalCount should be (1)
-    Thread.sleep(101L)
-    counter.increment()
-    counter.increment()
-
-    counter.totalCount should be (2)
-  }
+  def createCounter(gran: Granularity) = new BasicCounter(gran)
 }

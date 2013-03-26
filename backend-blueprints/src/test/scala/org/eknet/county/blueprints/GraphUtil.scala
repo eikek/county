@@ -1,7 +1,7 @@
 package org.eknet.county.blueprints
 
 import com.tinkerpop.blueprints.impls.orient.OrientGraph
-import java.nio.file.Files
+import java.nio.file.{Path, Files}
 
 /**
  *
@@ -11,9 +11,14 @@ import java.nio.file.Files
  */
 object GraphUtil {
 
-  def withGraph[A](body: OrientGraph => A): A = {
-    val dir = Files.createTempDirectory("testdb")
-    val g = new OrientGraph("local:"+ dir.toAbsolutePath.toString)
+  def createGraphDir = Files.createTempDirectory("testdb")
+
+  def createGraph(dir: Path) = {
+    new OrientGraph("local:"+ dir.toAbsolutePath.toString)
+  }
+
+  def withGraph[A](dir: Path)(body: OrientGraph => A): A = {
+    val g = createGraph(dir)
     try {
       body(g)
     } finally {

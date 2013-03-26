@@ -1,8 +1,9 @@
 package org.eknet.county.blueprints
 
-import org.scalatest.FunSuite
+import org.scalatest.{BeforeAndAfter, FunSuite}
 import org.scalatest.matchers.ShouldMatchers
-import org.eknet.county.Granularity
+import org.eknet.county.{FileUtils, AbstractPoolSuite, Granularity}
+import java.nio.file.Path
 
 /**
  *
@@ -10,29 +11,20 @@ import org.eknet.county.Granularity
  * @since 25.03.13 09:41
  * 
  */
-class BlueprintsPoolSuite extends FunSuite with ShouldMatchers {
+class BlueprintsPoolSuite extends AbstractPoolSuite with FileUtils with BeforeAndAfter {
 
-  test ("simple crud tests") {
-    GraphUtil.withGraph { g =>
-      val pool = new BlueprintsPool(g, Granularity.Second)
-      pool.find("not-there") should be (None)
+  private var graphdir: Path = null
 
-      val c1 = pool.getOrCreate("hello-counter")
-      c1.increment()
-      c1.totalCount should be (1)
+  before {
+    graphdir = GraphUtil.createGraphDir
+  }
 
-      val c12 = pool.getOrCreate("hello-counter")
-      c12.totalCount should be (1)
+  after {
+    removeDir(graphdir)
+  }
 
-      val c13 = pool.find("hello-counter")
-      c13 should not be (None)
-
-      c13.get.totalCount should be (1)
-
-      pool.remove("sdfsdf") should be (false)
-      val rc = pool.remove("hello-counter")
-      rc should be (true)
-      pool.find("hello-counter") should be (None)
-    }
+  def createPool() = {
+    val g = GraphUtil.createGraph(graphdir)
+    new BlueprintsPool(g, Granularity.Second)
   }
 }
