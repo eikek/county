@@ -101,4 +101,14 @@ class CountySuite extends FunSuite with ShouldMatchers {
 
     county("bylocation").children.toList.sorted should be (List("Germany", "Italy", "USA"))
   }
+
+  test ("create children of composite counters") {
+    val county = County.create()
+
+    val cc = county("a.b.c", "a.x.v")
+    cc("help").increment()
+    cc.totalCount should be (2)
+    county("a.b.c.help").totalCount should be (1)
+    county("a.b").totalCount should be (1)
+  }
 }

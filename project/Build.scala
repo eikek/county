@@ -102,13 +102,13 @@ object Api extends Build {
 object BlueprintsBackend extends Build {
 
   lazy val module = Project(
-    id = "county-backend-blueprints",
-    base = file("backend-blueprints"),
+    id = "county-blueprints",
+    base = file("blueprints"),
     settings = buildSettings
   ) dependsOn(Api.module % "compile; test->test")
 
   lazy val buildSettings = Project.defaultSettings ++ Seq(
-    name := "county-backend-blueprints",
+    name := "county-blueprints",
     libraryDependencies ++= deps
   )
 
