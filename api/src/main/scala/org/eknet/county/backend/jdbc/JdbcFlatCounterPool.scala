@@ -68,7 +68,9 @@ class JdbcFlatCounterPool(val granularity: Granularity, dataSource: DataSource) 
 
   protected def createCounter(name: String) = {
     val table = createTableName(name)
-    new JdbcFlatCounter(granularity, table, dataSource, ddl)
+    val c = new JdbcFlatCounter(granularity, table, dataSource)
+    c.ddl = this.ddl
+    c
   }
 
   protected def createTableName(name: String) = tableNamePrefix + Digest.digest(name)

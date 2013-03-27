@@ -45,20 +45,17 @@ class JdbcCounterPool(val granularity: Granularity, dataSource: DataSource) exte
   @BeanProperty var findCounterSQL = "SELECT COUNTERID FROM %s WHERE COUNTERID = ?".format(metadataTableName)
   @BeanProperty var removeCounterSQL = "DELETE FROM %s WHERE COUNTERID = ?".format(metadataTableName)
 
-  private val schemaCreated = new AtomicBoolean(false)
+  createSchema()
 
-  protected def createSchema() {
-    if (schemaCreated.compareAndSet(false, true)) {
-      if (!ddl.schemaExists(metadataTableName)) {
-        ddl.createSchema()
-
-      }
+  private def createSchema() {
+    if (!ddl.schemaExists(metadataTableName)) {
+      ddl.createSchema()
     }
   }
+
   def getOrCreate(name: String) = find(name) getOrElse (createCounter(name))
 
   def find(name: String) = {
-    createSchema()
     val counterId = createCountId(name)
     withConnection { conn =>
       val select = conn.prepareStatement(findCounterSQL)
@@ -73,7 +70,6 @@ class JdbcCounterPool(val granularity: Granularity, dataSource: DataSource) exte
   }
 
   def remove(name: String) = {
-    createSchema()
     val id = createCountId(name)
     withTx { conn =>
       val delete = conn.prepareStatement(removeCounterSQL)

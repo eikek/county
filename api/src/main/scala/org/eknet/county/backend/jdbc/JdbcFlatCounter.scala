@@ -35,11 +35,19 @@ import reflect.BeanProperty
  * @since 25.03.13 19:24
  * 
  */
-class JdbcFlatCounter(val granularity: Granularity, table: String, dataSource: DataSource, ddl: SchemaDDL) extends CounterBase {
+class JdbcFlatCounter(val granularity: Granularity, table: String, dataSource: DataSource) extends CounterBase {
 
   implicit private val ds = dataSource
 
-  private val schemaCreated = new AtomicBoolean(false)
+  @BeanProperty var ddl = SchemaDDL(
+    Seq("""
+          |CREATE TABLE %s (
+          |  TIMEKEY NUMERIC(20,0) NOT NULL PRIMARY KEY,
+          |  COUNTERVALUE NUMERIC(20,0) NOT NULL
+          |)
+        """.stripMargin
+    )
+  )
 
   @BeanProperty var specialTimeKeyLastAccess = Long.MinValue
   @BeanProperty var specialTimeKeyResetTime = Long.MinValue +1
@@ -68,29 +76,27 @@ class JdbcFlatCounter(val granularity: Granularity, table: String, dataSource: D
   @BeanProperty
   var setEntrySQL = "UPDATE %s SET COUNTERVALUE = ? WHERE TIMEKEY = ?".format(table)
 
+  createSchema()
 
   private def boundaryKey = math.max(specialTimeKeyLastAccess, specialTimeKeyResetTime)
 
   private def createSchema() {
-    if (schemaCreated.compareAndSet(false, true)) {
-      if (!ddl.schemaExists(table)) {
-        ddl.copy(createTable = ddl.createTable.map(_.format(table))).createSchema()
-        withTx { conn =>
-          val insert = conn.prepareStatement(insertEntrySQL)
-          insert.setLong(1, specialTimeKeyLastAccess)
-          insert.setLong(2, 0L)
-          insert.executeUpdate()
-          insert.setLong(1, specialTimeKeyResetTime)
-          insert.setLong(2, System.currentTimeMillis())
-          insert.executeUpdate()
-        }
+    if (!ddl.schemaExists(table)) {
+      ddl.copy(createTable = ddl.createTable.map(_.format(table))).createSchema()
+      withTx { conn =>
+        val insert = conn.prepareStatement(insertEntrySQL)
+        insert.setLong(1, specialTimeKeyLastAccess)
+        insert.setLong(2, 0L)
+        insert.executeUpdate()
+        insert.setLong(1, specialTimeKeyResetTime)
+        insert.setLong(2, System.currentTimeMillis())
+        insert.executeUpdate()
       }
     }
   }
 
   def add(when: TimeKey, value: Long) {
     if (value != 0) {
-      createSchema()
       val timekey = granularity.keyFor(when.timestamp).timestamp
       withTx { conn =>
         val query = conn.prepareStatement(selectEntrySQL)
@@ -116,7 +122,6 @@ class JdbcFlatCounter(val granularity: Granularity, table: String, dataSource: D
   }
 
   def totalCount = {
-    createSchema()
     withConnection { conn =>
       val select = conn.prepareStatement(totalCountSQL)
       select.setLong(1, boundaryKey)
@@ -126,7 +131,6 @@ class JdbcFlatCounter(val granularity: Granularity, table: String, dataSource: D
   }
 
   def countIn(range: (TimeKey, TimeKey)) = {
-    createSchema()
     withConnection { conn =>
       val select = conn.prepareStatement(countInSQL)
       select.setLong(1, range._1.timestamp)
@@ -137,7 +141,6 @@ class JdbcFlatCounter(val granularity: Granularity, table: String, dataSource: D
   }
 
   def reset() {
-    createSchema()
     withTx { conn =>
       val delete = conn.prepareStatement(resetSQL)
       delete.setLong(1, boundaryKey)
@@ -150,7 +153,6 @@ class JdbcFlatCounter(val granularity: Granularity, table: String, dataSource: D
   }
 
   def resetTime = withTx { conn =>
-    createSchema()
     val select = conn.prepareStatement(selectEntrySQL)
     select.setLong(1, specialTimeKeyResetTime)
     val rs = select.executeQuery()
@@ -162,7 +164,6 @@ class JdbcFlatCounter(val granularity: Granularity, table: String, dataSource: D
   }
 
   def lastAccess = withTx { conn =>
-    createSchema()
     val select = conn.prepareStatement(selectEntrySQL)
     select.setLong(1, specialTimeKeyLastAccess)
     val rs = select.executeQuery()
@@ -174,7 +175,6 @@ class JdbcFlatCounter(val granularity: Granularity, table: String, dataSource: D
   }
 
   def keys = {
-    createSchema()
     withConnection { conn =>
       val select = conn.prepareStatement(keysSQL)
       select.setLong(1, boundaryKey)
