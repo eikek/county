@@ -17,11 +17,11 @@
 package org.eknet.countyj;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.eknet.county.CounterKey;
 import org.eknet.county.County;
-import scala.actors.threadpool.Arrays;
 import scala.collection.JavaConversions$;
 
 /**
