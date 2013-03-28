@@ -231,4 +231,12 @@ There is a thin Java wrapper to make using county from Java less painful. It jus
 calls to scala objects. When using county from java, you must add the scala library to the
 dependencies.
 
-The Java Api is located in the packate `org.eknet.countyj`.
+The Java Api is located in the packate `org.eknet.countyj`. A new `County` object can be created
+using
+
+    JDefaultCounty county = Counties.create();
+
+Nodes are selected using `county.apply()`, a better shortcuts is `county.get(path)`:
+
+    county.get("app.logins").get(username).totalCount
+
