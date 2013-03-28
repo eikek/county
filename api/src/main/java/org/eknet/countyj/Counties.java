@@ -33,6 +33,10 @@ public final class Counties {
   private Counties() {
   }
 
+  public static CounterKey parseKey(String key) {
+    return CounterKey.parse(key, CounterKey.defaultSegmentDelimiter(), CounterKey.defaultNameSeparator());
+  }
+
   public static JDefaultCounty create() {
     return new JDefaultCounty();
   }

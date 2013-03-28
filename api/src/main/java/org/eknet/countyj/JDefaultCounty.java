@@ -17,6 +17,7 @@
 package org.eknet.countyj;
 
 import org.eknet.county.CounterKey;
+import org.eknet.county.CounterKey$;
 import org.eknet.county.CounterPool;
 import org.eknet.county.DefaultCounty;
 import scala.Tuple2;
@@ -26,6 +27,14 @@ import scala.Tuple2;
  * @since 25.03.13 19:12
  */
 public class JDefaultCounty extends DefaultCounty {
+
+  public JDefaultCounty(char segmentDelimiter) {
+    super(segmentDelimiter);
+  }
+
+  public JDefaultCounty() {
+    super(CounterKey$.MODULE$.defaultSegmentDelimiter());
+  }
 
   public void addFirst(String pattern, CounterPool pool) {
     setCounterFactories(this.getCounterFactories().$colon$colon(new Tuple2<String, CounterPool>(pattern, pool)));

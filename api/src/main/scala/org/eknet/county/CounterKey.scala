@@ -22,7 +22,7 @@ final case class CounterKey(path: List[List[String]]) {
 
   def / (seg: CounterKey) = CounterKey(path ::: seg.path)
 
-  def hasWildcard = path.find(s => s.contains("*") || s.contains("?")).isDefined
+  def hasWildcard = path.flatMap(s => s).find(s => s.contains("*") || s.contains("?")).isDefined
 
   override def toString = asString
 }
@@ -31,7 +31,10 @@ object CounterKey {
 
   val empty = CounterKey(List())
 
-  implicit def apply(path: String): CounterKey = parse(path, '.', '|')
+  val defaultSegmentDelimiter = '.'
+  val defaultNameSeparator = '|'
+
+  implicit def apply(path: String): CounterKey = parse(path, defaultSegmentDelimiter, defaultNameSeparator)
 
   def parse(path: String, delimiter: Char, separator: Char): CounterKey = {
     val parser = new KeyParser(delimiter, separator)

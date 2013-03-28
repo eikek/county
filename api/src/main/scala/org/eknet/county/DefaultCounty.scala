@@ -23,12 +23,18 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 import reflect.BeanProperty
 
 /**
+ * @param segmentDelimiter the delimiter used to separate segments of a path. the default
+ *                         is used if not specified.
+ *
+ *                         This is used here to match the path -> [[org.eknet.county.CounterPool]]
+ *                         mappings.
+ *
  * @author Eike Kettner eike.kettner@gmail.com
  * @since 24.03.13 17:50
  */
-class DefaultCounty extends County with ProxyCounty {
+class DefaultCounty(segmentDelimiter: Char = CounterKey.defaultSegmentDelimiter) extends County with ProxyCounty {
 
-  val self: County = new Tree(CounterKey.empty, ListBuffer(), factory)
+  val self: County = new Tree(CounterKey.empty, ListBuffer(), segmentDelimiter, factory)
 
   @BeanProperty
   var counterFactories: List[(String, CounterPool)] = List("**" -> new BasicCounterPool)
@@ -36,7 +42,7 @@ class DefaultCounty extends County with ProxyCounty {
   private def factory(path: CounterKey) = createCounter(counterFactories)(path)
 
   private def createCounter(list: List[(String, CounterPool)])(path: CounterKey) = {
-    val pool = list.find(t => Glob(t._1, '.').matches(path.asString))
+    val pool = list.find(t => Glob(t._1, segmentDelimiter).matches(path.asString))
       .getOrElse(sys.error("No counter pool avvailable"))
       ._2
     pool.getOrCreate(path.asString)
@@ -46,7 +52,7 @@ class DefaultCounty extends County with ProxyCounty {
 
 object DefaultCounty {
 
-  private[county] class Tree(val path: CounterKey, val childList: ListBuffer[Tree], factory: CounterKey => Counter) extends County {
+  private[county] class Tree(val path: CounterKey, val childList: ListBuffer[Tree], segmentDelimiter: Char, factory: CounterKey => Counter) extends County {
 
     var self: Counter = new TreeCounter(childList)
     private val counterLock = new ReentrantReadWriteLock()
@@ -68,7 +74,7 @@ object DefaultCounty {
     }
 
     private def nextChildren(name: List[String]) = childList.filter { c =>
-      name.map(n => Glob(n, '.').matches(c.name)).reduce(_ || _)
+      name.map(n => Glob(n, segmentDelimiter).matches(c.name)).reduce(_ || _)
     }.toList
 
     private def resolveNext(name: CounterKey): County = {
@@ -84,7 +90,7 @@ object DefaultCounty {
             } else {
               upgradeLock {
                 name.headSegment map { head =>
-                  addChild(new Tree(path / head, ListBuffer(), factory))
+                  addChild(new Tree(path / head, ListBuffer(), segmentDelimiter, factory))
                 }
               }
             }
@@ -118,7 +124,7 @@ object DefaultCounty {
 
     @tailrec
     private def create(name: CounterKey): County = {
-      val t = new Tree(path / name.head, ListBuffer(), factory)
+      val t = new Tree(path / name.head, ListBuffer(), segmentDelimiter, factory)
       if (name.size == 1) {
         addChild(t)
       } else {
