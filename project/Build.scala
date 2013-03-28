@@ -71,6 +71,7 @@ object RootBuild extends Build {
     scalaVersion := Version.scala,
     publishTo := Some("eknet-maven2" at "https://eknet.org/maven2"),
     publishArtifact in Test := true,
+    publishMavenStyle := true,
     credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
     crossScalaVersions := Seq("2.9.2", "2.9.3", "2.10.1"),
     exportJars := true,
