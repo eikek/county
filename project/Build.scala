@@ -66,7 +66,7 @@ object RootBuild extends Build {
   )
 
   override lazy val settings = super.settings ++ Seq(
-    version := "0.1.0-SNAPSHOT",
+    version := "0.1.0",
     organization := "org.eknet.county",
     scalaVersion := Version.scala,
     publishTo := Some("eknet-maven2" at "https://eknet.org/maven2"),
