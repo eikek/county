@@ -28,7 +28,7 @@ import reflect.BeanProperty
  */
 class DefaultCounty extends County with ProxyCounty {
 
-  val self: County = new Tree("_root_", ListBuffer(), factory)
+  val self: County = new Tree(CounterKey.empty, ListBuffer(), factory)
 
   @BeanProperty
   var counterFactories: List[(String, CounterPool)] = List("**" -> new BasicCounterPool)
@@ -36,7 +36,7 @@ class DefaultCounty extends County with ProxyCounty {
   private def factory(path: CounterKey) = createCounter(counterFactories)(path)
 
   private def createCounter(list: List[(String, CounterPool)])(path: CounterKey) = {
-    val pool = list.find(t => Glob(t._1, '.').matches(path.tail.asString))
+    val pool = list.find(t => Glob(t._1, '.').matches(path.asString))
       .getOrElse(sys.error("No counter pool avvailable"))
       ._2
     pool.getOrCreate(path.asString)
@@ -51,7 +51,7 @@ object DefaultCounty {
     var self: Counter = new TreeCounter(childList)
     private val counterLock = new ReentrantReadWriteLock()
     private val childLock = new ReentrantReadWriteLock()
-    val name = path.lastSegment
+    val name = if (path.empty) "_root_" else path.lastSegment
 
     private def isLeaf = childList.isEmpty && !self.isInstanceOf[TreeCounter]
 
@@ -89,7 +89,7 @@ object DefaultCounty {
           }
           case list => list
         }
-        val nextCounty = if (nextSegs.size == 1) nextSegs(0) else new BasicCompositeCounty(path / name.head, nextSegs)
+        val nextCounty = if (nextSegs.size == 1) nextSegs(0) else new BasicCompositeCounty(nextSegs)
         if (name.size == 1) {
           nextCounty
         } else {
@@ -100,7 +100,12 @@ object DefaultCounty {
 
     def apply(name: CounterKey*): County = {
       val next = name.map(resolveNext)
-      if (next.size == 1) next(0) else new BasicCompositeCounty(name.head / "**", next)
+      if (next.size == 1) next(0) else {
+        if (name.size == 1)
+          new BasicCompositeCounty(name(0), next)
+        else
+          new BasicCompositeCounty(next)
+      }
     }
 
     def findChild(name: String) = childList.find(c => c.name == name)
@@ -164,6 +169,12 @@ object DefaultCounty {
     def children = wrapLock(counterLock.readLock()) {
       this.childList.map(_.name).toList.sorted
     }
+
+    override def toString = if (isLeaf) {
+      self.toString
+    } else {
+      "Tree["+path+"]"
+    }
   }
 
   private class EmptyCounty(val path: CounterKey) extends County {
@@ -191,13 +202,12 @@ object DefaultCounty {
 
     private def next(name: String) = {
       val next = nodes.flatMap(_.childList).filter(n => fun(n.name) == name)
-      new BasicCompositeCounty(path / name, next)
+      if (next.size == 1) next(0) else new BasicCompositeCounty(next)
     }
 
     override def apply(names: CounterKey*) = {
       val multi = names.map(n => next(n.headSegment))
-      val nextPath = if (names.size == 1) names.head else names.head / "**"
-      val multiCounty = if (multi.size == 1) multi(0) else new BasicCompositeCounty(path / nextPath, multi)
+      val multiCounty = if (multi.size == 1) multi(0) else new BasicCompositeCounty(multi)
       if (names.size == 1) {
         multiCounty
       } else {
@@ -215,6 +225,29 @@ object DefaultCounty {
     override def apply(name: CounterKey*) = {
       val fn = name.map(n => CounterKey(fun(n.headSegment) :: n.path.tail))
       self.apply(fn: _*)
+    }
+  }
+
+  /**
+   * Finds a consolidated key for a list of keys. It compares elemnts of same
+   * index and creates a new key by mapping each element to either itself, if
+   * it is equal in all keys, or the `*` wildcard, if it's not equal in all keys.
+   *
+   * @param names
+   * @param fin
+   * @return
+   */
+  @tailrec
+  private[county] def nextPath(names: List[CounterKey], fin: CounterKey): CounterKey = names match {
+    case a::Nil => a
+    case a::as if (a.empty) => fin
+    case a::as => {
+      val equal = as.map(ck => ck.head == a.head).reduce(_ && _)
+      if (equal) {
+        nextPath(names.map(_.tail), fin / a.head)
+      } else {
+        nextPath(names.map(_.tail), fin / "*")
+      }
     }
   }
 }

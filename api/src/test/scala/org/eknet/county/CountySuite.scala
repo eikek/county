@@ -2,6 +2,7 @@ package org.eknet.county
 
 import org.scalatest.FunSuite
 import org.scalatest.matchers.ShouldMatchers
+import org.eknet.county.CounterKey
 
 /**
  * @author Eike Kettner eike.kettner@gmail.com
@@ -19,6 +20,7 @@ class CountySuite extends FunSuite with ShouldMatchers {
     county("a.b.c").increment()
     county("a.b.d").increment()
     county("a.b.e").increment()
+    county("a.b.c").path should be (CounterKey("a.b.c"))
     county("a.b").totalCount should be (4)
     county("a.*.c").totalCount should  be (2)
 
@@ -60,6 +62,10 @@ class CountySuite extends FunSuite with ShouldMatchers {
 
     val more = county("a.*.c", "a.b.d")
     more.totalCount should be (3)
+
+    county("a.*.c").path should be (CounterKey("a.b.c"))
+    county("a.b.*.1").path should be (CounterKey("a.b.*.1"))
+    county("a.b.c.1", "a.b.c.2", "a.b.d.1").path should be (CounterKey("a.b.*.*"))
   }
 
   test ("filter keys") {
@@ -110,5 +116,15 @@ class CountySuite extends FunSuite with ShouldMatchers {
     cc.totalCount should be (2)
     county("a.b.c.help").totalCount should be (1)
     county("a.b").totalCount should be (1)
+  }
+
+  test ("calculate next paths from multiple") {
+    var multiple = List(CounterKey("a.c.1"), CounterKey("a.d.1"), CounterKey("a.e.3"))
+    var next = DefaultCounty.nextPath(multiple, CounterKey.empty)
+    next.asString should be ("a.*.*")
+
+    multiple = List(CounterKey("a.c.1"), CounterKey("a.d.1"), CounterKey("a.e.1"))
+    next = DefaultCounty.nextPath(multiple, CounterKey.empty)
+    next.asString should be ("a.*.1")
   }
 }
