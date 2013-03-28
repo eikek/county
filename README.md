@@ -97,12 +97,18 @@ Specifying more than one path is possible and yields in a composite counter, tha
 given set of nodes. The same can be achieved by using path patterns with wildcards `*` or `?`.
 For example:
 
-    county("a.*.1").increment()
     county("a.b.1", "a.c.1").increment()
+    county("a.b|c.1").increment()
 
-would increment the counters `a.b.1` and `a.c.1`. You can use `*` to match any character multiple times
-or `?` to match exactly one character. If the path pattern does not match any node, an empty counter
-is returned that cannot be modified.
+would increment the counters `a.b.1` and `a.c.1`. You can specify a list of children to select by
+separating the names by '|'. All nodes that don't exist, are created.
+
+Additionally, you can use wildcards to select from _existing child nodes_. Use `*` to match any character
+multiple times or `?` to match exactly one character.
+
+    county("a.*.1").increment()
+
+If the path pattern does not match any node, an empty counter is returned that cannot be modified.
 
 ### Filtering Keys
 

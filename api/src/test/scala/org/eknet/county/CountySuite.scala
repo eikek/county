@@ -2,7 +2,6 @@ package org.eknet.county
 
 import org.scalatest.FunSuite
 import org.scalatest.matchers.ShouldMatchers
-import org.eknet.county.CounterKey
 
 /**
  * @author Eike Kettner eike.kettner@gmail.com
@@ -126,5 +125,14 @@ class CountySuite extends FunSuite with ShouldMatchers {
     multiple = List(CounterKey("a.c.1"), CounterKey("a.d.1"), CounterKey("a.e.1"))
     next = DefaultCounty.nextPath(multiple, CounterKey.empty)
     next.asString should be ("a.*.1")
+  }
+
+  test ("select multiple children") {
+
+    val county = County.create()
+    county("a.h|k|l").increment()
+    county("a.h").totalCount should be (1)
+    county("a.k").totalCount should be (1)
+    county("a.l").totalCount should be (1)
   }
 }

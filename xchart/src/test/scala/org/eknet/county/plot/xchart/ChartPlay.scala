@@ -78,7 +78,7 @@ object ChartPlay extends App {
 
   county("app.*.hello-world").createCounterChart(
     chartopts.copy(resolution = Some(byweek),
-      seriesName = path => path.tail.tail.headSegment,
+      seriesName = path => path.tail.tail.headSegment.head,
       compact = true,
       range = Some(TimeKey.now.byMonth.interval))).display()
 

@@ -53,4 +53,5 @@ class BasicCompositeCounty(val path: CounterKey, val counties: Iterable[County])
 
   def this(c: Iterable[County]) = this(DefaultCounty.nextPath(c.map(_.path).toList, CounterKey.empty), c)
 
+  require(!counties.isEmpty, "counties argument must not be empty")
 }

@@ -9,12 +9,12 @@ import java.util.regex.Pattern
  * @since 22.03.13 13:16
  * 
  */
-final case class CounterKey(path: List[String]) {
+final case class CounterKey(path: List[List[String]]) {
 
   lazy val empty = path.isEmpty
   lazy val size = path.size
-  lazy val asString = path.mkString(".")
-  lazy val head = CounterKey(path.head)
+  lazy val asString = path.map(seg => seg.mkString("|")).mkString(".")
+  lazy val head = CounterKey(List(path.head))
   lazy val tail = CounterKey(path.tail)
 
   lazy val lastSegment = path.last
@@ -31,17 +31,24 @@ object CounterKey {
 
   val empty = CounterKey(List())
 
-  implicit def apply(path: String): CounterKey = parse(path, '.')
+  implicit def apply(path: String): CounterKey = parse(path, '.', '|')
 
-  def parse(path: String, delimiter: Char): CounterKey = {
-    val parser = new KeyParser(delimiter)
+  def parse(path: String, delimiter: Char, separator: Char): CounterKey = {
+    val parser = new KeyParser(delimiter, separator)
     CounterKey(parser.readPath(path))
   }
 
-  private class KeyParser(del: Char) extends RegexParsers {
-    private val segment = ("[^"+ Pattern.quote(del.toString) +"]+").r
+  private class KeyParser(segmentDelimiter: Char, segmentSeparator: Char) extends RegexParsers {
 
-    private[this] def path = segment ~ rep(del ~ segment) ^^ {
+    private val delimiters = List(segmentDelimiter.toString, segmentSeparator.toString)
+
+    private val segLiteral = delimiters.map(s => Pattern.quote(s)).mkString("[^", "", "]+").r
+
+    private val segplus = segLiteral ~ rep(segmentSeparator ~ segLiteral) ^^ {
+      case s ~ next => (s :: next.map(_._2)).distinct.sorted
+    }
+
+    private[this] def path = segplus ~ rep(segmentDelimiter ~ segplus) ^^ {
       case seg ~ next => seg :: next.map(_._2)
     }
 

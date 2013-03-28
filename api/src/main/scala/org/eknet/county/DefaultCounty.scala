@@ -51,7 +51,7 @@ object DefaultCounty {
     var self: Counter = new TreeCounter(childList)
     private val counterLock = new ReentrantReadWriteLock()
     private val childLock = new ReentrantReadWriteLock()
-    val name = if (path.empty) "_root_" else path.lastSegment
+    val name = if (path.empty) "_root_" else path.lastSegment.head
 
     private def isLeaf = childList.isEmpty && !self.isInstanceOf[TreeCounter]
 
@@ -67,8 +67,8 @@ object DefaultCounty {
       }
     }
 
-    private def nextChildren(name: String) = childList.filter { c =>
-      Glob(name, '.').matches(c.name)
+    private def nextChildren(name: List[String]) = childList.filter { c =>
+      name.map(n => Glob(n, '.').matches(c.name)).reduce(_ || _)
     }.toList
 
     private def resolveNext(name: CounterKey): County = {
@@ -78,12 +78,14 @@ object DefaultCounty {
       lockRead {
         val nextSegs = nextChildren(name.headSegment) match {
           case Nil => {
-            if (name.hasWildcard) {
+            if (name.head.hasWildcard) {
               //return an empty counter
               List(new EmptyCounty(path / name))
             } else {
               upgradeLock {
-                List(addChild(new Tree(path / name.head, ListBuffer(), factory)))
+                name.headSegment map { head =>
+                  addChild(new Tree(path / head, ListBuffer(), factory))
+                }
               }
             }
           }
@@ -200,8 +202,8 @@ object DefaultCounty {
 
   private[county] class FilterKeyCounty(val self: County, val nodes:List[Tree], fun: String => String) extends ProxyCounty {
 
-    private def next(name: String) = {
-      val next = nodes.flatMap(_.childList).filter(n => fun(n.name) == name)
+    private def next(names: List[String]) = {
+      val next = nodes.flatMap(_.childList).filter(n => names.contains(fun(n.name)))
       if (next.size == 1) next(0) else new BasicCompositeCounty(next)
     }
 
@@ -223,7 +225,8 @@ object DefaultCounty {
   private[county] class TransformKeyCounty(val self: County, val nodes: List[Tree], fun: String => String) extends ProxyCounty {
 
     override def apply(name: CounterKey*) = {
-      val fn = name.map(n => CounterKey(fun(n.headSegment) :: n.path.tail))
+      val transformed = name.head.headSegment.map(s => fun(s))
+      val fn = name.map(n => CounterKey(transformed :: n.path.tail))
       self.apply(fn: _*)
     }
   }
@@ -239,6 +242,7 @@ object DefaultCounty {
    */
   @tailrec
   private[county] def nextPath(names: List[CounterKey], fin: CounterKey): CounterKey = names match {
+    case Nil => throw new IllegalArgumentException("'names' must not be empty")
     case a::Nil => a
     case a::as if (a.empty) => fin
     case a::as => {
