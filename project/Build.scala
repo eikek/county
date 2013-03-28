@@ -66,7 +66,7 @@ object RootBuild extends Build {
   )
 
   override lazy val settings = super.settings ++ Seq(
-    version := "0.1.0",
+    version := "0.2.0-SNAPSHOT",
     organization := "org.eknet.county",
     scalaVersion := Version.scala,
     publishTo := Some("eknet-maven2" at "https://eknet.org/maven2"),
@@ -77,6 +77,7 @@ object RootBuild extends Build {
     scalacOptions ++= Seq("-unchecked", "-deprecation"),
     resolvers := Seq(Resolvers.eknet),
     pomIncludeRepository := (_ => false),
+    parallelExecution := false,
     scmInfo := Some(ScmInfo(new URL("https://eknet.org/gitr/?r=county.git"), "scm:git:https://eknet.org/git/county.git")),
     licenses := Seq(("ASL2", new URL("http://www.apache.org/licenses/LICENSE-2.0.txt")))
   )
