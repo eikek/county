@@ -28,7 +28,6 @@ trait CompositeCounty extends County with ProxyCounter {
 
   def apply(names: CounterKey*) = {
     val next = names.flatMap(n => counties.map(c => c(n)))
-    val nextPath = if (names.size == 1) names.head else CounterKey("**")
     if (next.size == 1) {
       next(0)
     } else {

@@ -210,7 +210,15 @@ object DefaultCounty {
 
     private def next(names: List[String]) = {
       val next = nodes.flatMap(_.childList).filter(n => names.contains(fun(n.name)))
-      if (next.size == 1) next(0) else new BasicCompositeCounty(next)
+      next match {
+        case Nil => if (names.size==1) {
+          new EmptyCounty(self.path/names(0))
+        } else {
+          new BasicCompositeCounty(names.map(n => new EmptyCounty(self.path / n)))
+        }
+        case a::Nil => next(0)
+        case _ => new BasicCompositeCounty(next)
+      }
     }
 
     override def apply(names: CounterKey*) = {
@@ -224,7 +232,7 @@ object DefaultCounty {
     }
 
     override def children = {
-      self.children.map(n => fun(n)).toSet
+      self.children.map(fun).toSet
     }
   }
 

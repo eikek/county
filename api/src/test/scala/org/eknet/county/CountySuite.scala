@@ -83,6 +83,11 @@ class CountySuite extends FunSuite with ShouldMatchers {
     ipcounter("Germany").totalCount should be (1)
     ipcounter("Italy").totalCount should be (2)
     ipcounter("USA").totalCount should be (3)
+    val france = ipcounter("France")
+    france.totalCount should be (0)
+    france.path.toString should be ("ips.France")
+    france.increment() //does nothing!
+    france.totalCount should be (0)
 
     ipcounter.children.toList.sorted should be (List("Germany", "Italy", "USA"))
   }
