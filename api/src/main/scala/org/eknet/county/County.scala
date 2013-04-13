@@ -92,8 +92,6 @@ object County {
 
   def create() = new DefaultCounty
 
-  def create(keys: CounterKey*): County = create()(keys: _*)
-
   def newEmptyCounty(key: CounterKey*) = {
     if (key.size == 1) {
       new EmptyCounty(key(0))
