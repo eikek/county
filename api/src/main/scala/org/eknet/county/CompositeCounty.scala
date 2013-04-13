@@ -53,7 +53,7 @@ trait CompositeCounty extends County with ProxyCounter {
 
 class BasicCompositeCounty(val path: CounterKey, val counties: Iterable[County]) extends CompositeCounty {
 
-  def this(c: Iterable[County]) = this(DefaultCounty.mergePaths(c.map(_.path).toList, CounterKey.empty), c)
+  def this(c: Iterable[County]) = this(CounterKey.mergePaths(c.map(_.path).toList, CounterKey.empty), c)
 
   require(!counties.isEmpty, "counties argument must not be empty")
 

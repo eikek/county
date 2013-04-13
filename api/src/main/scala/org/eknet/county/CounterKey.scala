@@ -2,6 +2,7 @@ package org.eknet.county
 
 import scala.util.parsing.combinator.RegexParsers
 import java.util.regex.Pattern
+import scala.annotation.tailrec
 
 /**
  * The representation of a county "path" like
@@ -50,6 +51,8 @@ object CounterKey {
 
   implicit def apply(path: String): CounterKey = parse(path, defaultSegmentDelimiter, defaultNameSeparator)
 
+  def apply(path: String, delimiter: Char): CounterKey = parse(path, delimiter, defaultNameSeparator)
+
   def parse(path: String, delimiter: Char, separator: Char): CounterKey = {
     if (path.isEmpty) {
       CounterKey.empty
@@ -60,6 +63,37 @@ object CounterKey {
   }
 
   def containsWildcard(str: String) = str.contains("*") || str.contains("?")
+
+  /**
+   * Creates one [[org.eknet.county.CounterKey]] for a given list of [[org.eknet.county.CounterKey]]s.
+   *
+   * The `result` should be intially `CounterKey.empty`, because segments are appended to it
+   * recursively.
+   *
+   * The segments of the new `CounterKey` are the union of the segments of the given `CounterKeys`
+   * at the same position. For example:
+   *
+   * {{{
+   *   "a.b.c", "a.e.c" -> "a.b|e.c"
+   *   "a.b.c", "a.e.d" -> "a.b|e.c|d"
+   *   "a.b.c", "a.b" -> "a.b"
+   * }}}
+   *
+   * If the list contains keys of different length, longer ones are discarded.
+   *
+   * @param keys
+   * @param result
+   * @return
+   */
+  @tailrec
+  private[county] final def mergePaths(keys: List[CounterKey], result: CounterKey): CounterKey = {
+    if (keys.exists(_.empty)) {
+      result
+    } else {
+      val mergedHead = keys.flatMap(k => k.headSegment).distinct
+      mergePaths(keys.map(_.tail), result / CounterKey(List(mergedHead)))
+    }
+  }
 
   private class KeyParser(segmentDelimiter: Char, segmentSeparator: Char) extends RegexParsers {
 

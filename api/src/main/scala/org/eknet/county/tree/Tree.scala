@@ -85,14 +85,22 @@ abstract sealed class Tree[A](var parent: Option[Tree[A]], val name: String, var
 
 object Tree {
 
-  def create[A](): Tree[A] = new RootNode[A](CounterKey.defaultSegmentDelimiter)
-  def create[A](delimiter: Char): Tree[A] = new RootNode[A](delimiter)
+  def create[A](delimiter: Char): Tree[A] = new MutableNode(delimiter)
+  def create[A](): Tree[A] = create(CounterKey.defaultSegmentDelimiter)
 
 }
 
-class MutableNode[A](parent: Option[Tree[A]], name: String, childList: ListBuffer[Tree[A]], delimiter: Char, data: Option[A]) extends Tree[A](parent, name, data) {
+final class MutableNode[A](parent: Option[Tree[A]], name: String, childList: ListBuffer[Tree[A]], delimiter: Char, data: Option[A]) extends Tree[A](parent, name, data) {
   def this(parent: Option[Tree[A]], name: String, delimiter: Char, data: A) = this(parent, name, ListBuffer(), delimiter, Option(data))
   def this(parent: Option[Tree[A]], name: String, delimiter: Char) = this(parent, name, ListBuffer(), delimiter, None)
+
+  /**
+   * Creates a root node.
+   *
+   * @param delimiter
+   * @return
+   */
+  def this(delimiter: Char) = this(None, "", ListBuffer(), delimiter, None)
 
   def addChild(name: String): Tree[A] = {
     val n = new MutableNode[A](Some(this), name, delimiter)
@@ -107,10 +115,3 @@ class MutableNode[A](parent: Option[Tree[A]], name: String, childList: ListBuffe
 
   def findChildren(pattern: String) = childList.filter(n => Glob(pattern, delimiter).matches(n.name)).toList
 }
-
-class RootNode[A](childList: ListBuffer[Tree[A]], delimiter: Char, data: Option[A]) extends MutableNode[A](None, "_root_", childList, delimiter, data) {
-  def this(delimiter: Char) = this(ListBuffer(), delimiter, None)
-
-  override def getPath = CounterKey.empty
-}
-

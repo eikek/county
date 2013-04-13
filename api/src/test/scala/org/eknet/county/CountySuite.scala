@@ -3,6 +3,7 @@ package org.eknet.county
 import org.scalatest.FunSuite
 import org.scalatest.matchers.ShouldMatchers
 import scala.annotation.tailrec
+import org.eknet.county.tree.TreeCounty
 
 /**
  * @author Eike Kettner eike.kettner@gmail.com
@@ -94,10 +95,10 @@ class CountySuite extends FunSuite with ShouldMatchers {
     county("a.b.c").increment()
     county("a.b.c").increment()
 
-    var pc = DefaultCounty.findTree(county("a.b.c")).get.data.get.asInstanceOf[BasicCounter]
+    var pc = TreeCounty.findTree(county("a.b.c")).get.data.get.asInstanceOf[BasicCounter]
     pc.granularity should be (Granularity.Millis)
 
-    pc = DefaultCounty.findTree(county("a.b.d")).get.data.get.asInstanceOf[BasicCounter]
+    pc = TreeCounty.findTree(county("a.b.d")).get.data.get.asInstanceOf[BasicCounter]
     pc.granularity should be (Granularity.Minute)
   }
 
@@ -181,11 +182,11 @@ class CountySuite extends FunSuite with ShouldMatchers {
 
   test ("calculate next paths from multiple") {
     var multiple = List(CounterKey("a.c.1"), CounterKey("a.d.1"), CounterKey("a.e.3"))
-    var next = DefaultCounty.mergePaths(multiple, CounterKey.empty)
+    var next = CounterKey.mergePaths(multiple, CounterKey.empty)
     next.asString should be ("a.c|d|e.1|3")
 
     multiple = List(CounterKey("a.c.1"), CounterKey("a.d.1"), CounterKey("a.e.1"))
-    next = DefaultCounty.mergePaths(multiple, CounterKey.empty)
+    next = CounterKey.mergePaths(multiple, CounterKey.empty)
     next.asString should be ("a.c|d|e.1")
   }
 
