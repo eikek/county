@@ -16,6 +16,9 @@
 
 package org.eknet.countyj;
 
+import java.util.Arrays;
+import java.util.List;
+
 import org.eknet.county.CounterKey;
 import org.eknet.county.County;
 import org.eknet.county.TimeKey;
@@ -111,6 +114,23 @@ public class JCounty implements County {
   @Override
   public JCounty apply(Seq<CounterKey> name) {
     return new JCounty(self.apply(name));
+  }
+
+  @Override
+  public void remove(Seq<CounterKey> names) {
+    self.remove(names);
+  }
+
+  public void remove(String... path) {
+    List<CounterKey> keys = Counties.pathToKey(path);
+    remove(Counties.asScala(keys));
+
+  }
+
+  public void remove(CounterKey... paths) {
+    //noinspection unchecked
+    List<CounterKey> keys = Arrays.asList(paths);
+    remove(Counties.asScala(keys));
   }
 
   public JCounty get(String... path) {

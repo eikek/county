@@ -13,4 +13,5 @@ trait ProxyCounty extends County with ProxyCounter {
   def filterKey(fun: (String) => String) = self.filterKey(fun)
   def transformKey(fun: (String) => String) = self.transformKey(fun)
   def children = self.children
+  def remove(names:CounterKey*) { self.remove(names: _*) }
 }

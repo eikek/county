@@ -1,9 +1,19 @@
 package org.eknet.county
 
-import util.parsing.combinator.RegexParsers
+import scala.util.parsing.combinator.RegexParsers
 import java.util.regex.Pattern
 
 /**
+ * The representation of a county "path" like
+ * {{{
+ *   webapp.logins.byname.john|mary.sucess
+ * }}}
+ * The path is a list of segments that itself can be
+ * specified a list. The example above would translate
+ * into this:
+ * {{{
+ *   List( List("webapp"),List("logins"),List("byname"),List("john","mary"),List("success") )
+ * }}}
  *
  * @author <a href="mailto:eike.kettner@gmail.com">Eike Kettner</a>
  * @since 22.03.13 13:16
@@ -13,7 +23,7 @@ final case class CounterKey(path: List[List[String]]) {
 
   lazy val empty = path.isEmpty
   lazy val size = path.size
-  lazy val asString = path.map(seg => seg.mkString("|")).mkString(".")
+  lazy val asString = path.map(seg => seg.mkString(CounterKey.defaultNameSeparator+"")).mkString(CounterKey.defaultSegmentDelimiter+"")
   lazy val head = CounterKey(List(path.head))
   lazy val tail = CounterKey(path.tail)
 
@@ -22,7 +32,11 @@ final case class CounterKey(path: List[List[String]]) {
 
   def / (seg: CounterKey) = CounterKey(path ::: seg.path)
 
-  def hasWildcard = path.flatMap(s => s).find(s => s.contains("*") || s.contains("?")).isDefined
+  /**
+   * Returns `true` is there is at least one segment that contains
+   * a wildcard.
+   */
+  lazy val hasWildcard = path.flatMap(s => s).exists(CounterKey.containsWildcard)
 
   override def toString = asString
 }
@@ -37,9 +51,15 @@ object CounterKey {
   implicit def apply(path: String): CounterKey = parse(path, defaultSegmentDelimiter, defaultNameSeparator)
 
   def parse(path: String, delimiter: Char, separator: Char): CounterKey = {
-    val parser = new KeyParser(delimiter, separator)
-    CounterKey(parser.readPath(path))
+    if (path.isEmpty) {
+      CounterKey.empty
+    } else {
+      val parser = new KeyParser(delimiter, separator)
+      CounterKey(parser.readPath(path))
+    }
   }
+
+  def containsWildcard(str: String) = str.contains("*") || str.contains("?")
 
   private class KeyParser(segmentDelimiter: Char, segmentSeparator: Char) extends RegexParsers {
 

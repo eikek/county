@@ -26,17 +26,15 @@ import org.scalatest.matchers.ShouldMatchers
 class CounterKeySuite extends FunSuite with ShouldMatchers {
 
   test ("simple paths") {
-
     val k = CounterKey("a.b.c")
     k.path should have size (3)
     k.asString should be ("a.b.c")
     k.path.map(_.size) should be (List(1,1,1))
 
-
+    CounterKey("") should be (CounterKey.empty)
   }
 
   test ("path with multiple selection") {
-
     var k = CounterKey("a.b|c|d.x")
     k.path should have size (3)
     k.asString should be ("a.b|c|d.x") //order does not matter, must be sorted

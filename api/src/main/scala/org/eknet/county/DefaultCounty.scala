@@ -16,11 +16,12 @@
 
 package org.eknet.county
 
-import collection.mutable.ListBuffer
 import annotation.tailrec
-import org.eknet.county.DefaultCounty.Tree
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import reflect.BeanProperty
+import org.eknet.county.util.Glob
+import org.eknet.county.tree.Tree
+import org.eknet.county.DefaultCounty.TreeCounty
 
 /**
  * @param segmentDelimiter the delimiter used to separate segments of a path. the default
@@ -34,7 +35,7 @@ import reflect.BeanProperty
  */
 class DefaultCounty(segmentDelimiter: Char = CounterKey.defaultSegmentDelimiter) extends County with ProxyCounty {
 
-  val self: County = new Tree(CounterKey.empty, ListBuffer(), segmentDelimiter, factory)
+  val self: County = new TreeCounty(Tree.create[Counter](segmentDelimiter), factory)
 
   @BeanProperty
   var counterFactories: List[(String, CounterPool)] = List("**" -> new BasicCounterPool)
@@ -42,230 +43,123 @@ class DefaultCounty(segmentDelimiter: Char = CounterKey.defaultSegmentDelimiter)
   private def factory(path: CounterKey) = createCounter(counterFactories)(path)
 
   private def createCounter(list: List[(String, CounterPool)])(path: CounterKey) = {
-    val pool = list.find(t => Glob(t._1, segmentDelimiter).matches(path.asString))
+    list.find(t => Glob(t._1, segmentDelimiter).matches(path.asString))
       .getOrElse(sys.error("No counter pool avvailable"))
       ._2
-    pool.getOrCreate(path.asString)
   }
 
 }
 
 object DefaultCounty {
 
-  private[county] class Tree(val path: CounterKey, val childList: ListBuffer[Tree], segmentDelimiter: Char, factory: CounterKey => Counter) extends County {
+  private[county] def findTree(county: County) = county match {
+    case tc: TreeCounty => Some(tc.node)
+    case _ => None
+  }
 
-    var self: Counter = new TreeCounter(childList)
+  private class TreeCounter(node: Tree[Counter]) extends CounterBase with CompositeCounter {
+    def counters = node.data.map(c => List(c)).getOrElse(node.getChildren.map(n => new TreeCounter(n)))
+  }
+
+  private implicit def node2Counter(node: Tree[Counter]) = new TreeCounter(node)
+
+  private class TreeCounty(val node: Tree[Counter], factory: CounterKey => CounterPool) extends County {
     private val counterLock = new ReentrantReadWriteLock()
-    private val childLock = new ReentrantReadWriteLock()
-    val name = if (path.empty) "_root_" else path.lastSegment.head
+    import org.eknet.county.util.locks._
 
-    private def isLeaf = childList.isEmpty && !self.isInstanceOf[TreeCounter]
+    def path = node.getPath
+
+    def apply(names: CounterKey*) = {
+      names.toList.flatMap(node.select) match {
+        case Nil => County.newEmptyCounty(names.map(n => path / n): _*)
+        case a::Nil => if (a == node) this else new TreeCounty(a, factory)
+        case list => new BasicCompositeCounty(list.map(n => new TreeCounty(n, factory)))
+      }
+    }
+
+    def remove(names: CounterKey*) {
+      //must first reset all affected counters
+      //todo or better remove counter completeley from pool?
+      names.toList.flatMap(node.select) foreach { _.reset() }
+      //remove the nodes
+      names.foreach(node.remove)
+      //reset node data (the counter)
+      wrapLock(counterLock.writeLock()) {
+        node.data = None
+      }
+    }
+
+    def filterKey(fun: (String) => String) = new FilteredCounty(this, fun)
+
+    def transformKey(fun: (String) => String) = new TransformedCounty(this, fun)
+
+    def children = node.getChildren.map(_.name)
 
     private def setupCounter() {
       implicit val rl = counterLock.readLock()
       implicit val wl = counterLock.writeLock()
-      lockRead {
-        if (self.isInstanceOf[TreeCounter] && childList.isEmpty) {
-          upgradeLock {
-            this.self = factory(path)
-          }
-        }
-      }
-    }
-
-    private def nextChildren(name: List[String]) = childList.filter { c =>
-      name.map(n => Glob(n, segmentDelimiter).matches(c.name)).reduce(_ || _)
-    }.toList
-
-    private def resolveNext(name: CounterKey): County = {
-      require(!isLeaf, "Cannot go beyond leaf nodes.")
-      implicit val rl = childLock.readLock()
-      implicit val wl = childLock.writeLock()
-      lockRead {
-        val nextSegs = nextChildren(name.headSegment) match {
-          case Nil => {
-            if (name.head.hasWildcard) {
-              //return an empty counter
-              List(new EmptyCounty(path / name))
-            } else {
+      if (!node.hasChildren) {
+        lockRead {
+          node.data match {
+            case None => {
               upgradeLock {
-                name.headSegment map { head =>
-                  addChild(new Tree(path / head, ListBuffer(), segmentDelimiter, factory))
-                }
+                node.data = Some(factory(path).getOrCreate(path.asString))
               }
             }
+            case  _ =>
           }
-          case list => list
         }
-        val nextCounty = if (nextSegs.size == 1) nextSegs(0) else new BasicCompositeCounty(nextSegs)
-        if (name.size == 1) {
-          nextCounty
-        } else {
-          nextCounty(name.tail)
-        }
-      }
-    }
-
-    def apply(name: CounterKey*): County = {
-      val next = name.map(resolveNext)
-      if (next.size == 1) next(0) else {
-        if (name.size == 1)
-          new BasicCompositeCounty(name(0), next)
-        else
-          new BasicCompositeCounty(next)
-      }
-    }
-
-    def findChild(name: String) = childList.find(c => c.name == name)
-    def addChild(node: Tree) = childList.find(c => c.name == node.name) getOrElse {
-      childList += node
-      node
-    }
-
-    @tailrec
-    private def create(name: CounterKey): County = {
-      val t = new Tree(path / name.head, ListBuffer(), segmentDelimiter, factory)
-      if (name.size == 1) {
-        addChild(t)
-      } else {
-        addChild(t).create(name.tail)
       }
     }
 
     def add(when: TimeKey, value: Long) {
       setupCounter()
-      self.add(when, value)
+      node.add(when, value)
     }
 
     def increment() {
       setupCounter()
-      self.increment()
+      node.increment()
     }
 
     def decrement() {
       setupCounter()
-      self.decrement()
+      node.decrement()
     }
 
     def add(value: Long) {
       setupCounter()
-      self.add(value)
+      node.add(value)
     }
 
     def totalCount = wrapLock(counterLock.readLock()) {
-      self.totalCount
+      node.totalCount
     }
 
     def countIn(range: (TimeKey, TimeKey)) = wrapLock(counterLock.readLock()) {
-      self.countIn(range)
+      node.countIn(range)
     }
 
     def reset() {
-      wrapLock(counterLock.writeLock()) {
-        self.reset()
+      wrapLock(counterLock.readLock()) {
+        node.reset()
       }
     }
 
-    def resetTime = wrapLock(counterLock.readLock())(self.resetTime)
-    def lastAccess = wrapLock(counterLock.readLock())(self.lastAccess)
-    def keys = wrapLock(counterLock.readLock())(self.keys)
+    def resetTime = wrapLock(counterLock.readLock()) { node.resetTime }
 
-    def filterKey(fun: (String) => String): County = new FilterKeyCounty(this, List(this), fun)
+    def lastAccess = wrapLock(counterLock.readLock()) { node.lastAccess }
 
-    def transformKey(fun: (String) => String): County = new TransformKeyCounty(this, List(this), fun)
-
-    def children = wrapLock(counterLock.readLock()) {
-      this.childList.map(_.name).toList.sorted
-    }
-
-    override def toString = if (isLeaf) {
-      self.toString
-    } else {
-      "Tree["+path+"]"
-    }
+    def keys = wrapLock(counterLock.readLock()) { node.keys }
   }
 
-  private class EmptyCounty(val path: CounterKey) extends County {
-    def add(when: TimeKey, value: Long) {}
-    def increment() {}
-    def decrement() {}
-    def add(value: Long) {}
-    def totalCount = 0L
-    def countIn(range: (TimeKey, TimeKey)) = 0L
-    def reset() {}
-    def resetTime = 0L
-    def lastAccess = 0L
-    def keys = List[TimeKey]()
-    def apply(name: CounterKey*) = if (name.size == 1) new EmptyCounty(path/name.head) else new EmptyCounty(path/name.head/"**")
-    def filterKey(fun: (String) => String) = this
-    def transformKey(fun: (String) => String) = this
-    def children = List[String]()
-  }
-
-  private class TreeCounter(nodes: Iterable[Tree]) extends CounterBase with CompositeCounter {
-    def counters = nodes.map(_.self)
-  }
-
-  private[county] class FilterKeyCounty(val self: County, val nodes:List[Tree], fun: String => String) extends ProxyCounty {
-
-    private def next(names: List[String]) = {
-      val next = nodes.flatMap(_.childList).filter(n => names.contains(fun(n.name)))
-      next match {
-        case Nil => if (names.size==1) {
-          new EmptyCounty(self.path/names(0))
-        } else {
-          new BasicCompositeCounty(names.map(n => new EmptyCounty(self.path / n)))
-        }
-        case a::Nil => next(0)
-        case _ => new BasicCompositeCounty(next)
-      }
-    }
-
-    override def apply(names: CounterKey*) = {
-      val multi = names.map(n => next(n.headSegment))
-      val multiCounty = if (multi.size == 1) multi(0) else new BasicCompositeCounty(multi)
-      if (names.size == 1) {
-        multiCounty
-      } else {
-        multiCounty(names.map(_.tail): _*)
-      }
-    }
-
-    override def children = {
-      self.children.map(fun).toSet
-    }
-  }
-
-  private[county] class TransformKeyCounty(val self: County, val nodes: List[Tree], fun: String => String) extends ProxyCounty {
-
-    override def apply(name: CounterKey*) = {
-      val transformed = name.head.headSegment.map(s => fun(s))
-      val fn = name.map(n => CounterKey(transformed :: n.path.tail))
-      self.apply(fn: _*)
-    }
-  }
-
-  /**
-   * Finds a consolidated key for a list of keys. It compares elemnts of same
-   * index and creates a new key by mapping each element to either itself, if
-   * it is equal in all keys, or the `*` wildcard, if it's not equal in all keys.
-   *
-   * @param names
-   * @param fin
-   * @return
-   */
   @tailrec
-  private[county] def nextPath(names: List[CounterKey], fin: CounterKey): CounterKey = names match {
-    case Nil => throw new IllegalArgumentException("'names' must not be empty")
-    case a::Nil => a
-    case a::as if (a.empty) => fin
-    case a::as => {
-      val equal = as.map(ck => ck.head == a.head).reduce(_ && _)
-      if (equal) {
-        nextPath(names.map(_.tail), fin / a.head)
-      } else {
-        nextPath(names.map(_.tail), fin / "*")
-      }
+  private[county] final def mergePaths(keys: List[CounterKey], result: CounterKey): CounterKey = {
+    if (keys.exists(_.empty)) {
+      result
+    } else {
+      val mergedHead = keys.flatMap(k => k.headSegment).distinct
+      mergePaths(keys.map(_.tail), result / CounterKey(List(mergedHead)))
     }
   }
 }

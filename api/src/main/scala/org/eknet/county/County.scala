@@ -20,10 +20,17 @@ trait County extends Counter {
    * Selects a county by applying the given name(s) to this
    * county's path.
    *
-   * @param name
+   * @param names
    * @return
    */
-  def apply(name: CounterKey*): County
+  def apply(names: CounterKey*): County
+
+  /**
+   * Removes nodes selected by the given keys.
+   *
+   * @param names
+   */
+  def remove(names: CounterKey*)
 
   /**
    * Returns a new county that will map the children of this
@@ -84,5 +91,26 @@ trait County extends Counter {
 object County {
 
   def create() = new DefaultCounty
+
+  def create(keys: CounterKey*): County = create()(keys: _*)
+
+  def newEmptyCounty(key: CounterKey*) = {
+    if (key.size == 1) {
+      new EmptyCounty(key(0))
+    } else {
+      new BasicCompositeCounty(key.map(k => new EmptyCounty(k)))
+    }
+  }
+
+  class EmptyCounty(val path: CounterKey) extends ProxyCounter with County {
+    val self = new BasicCompositeCounter(List())
+    def apply(names: CounterKey*) = {
+      new BasicCompositeCounty(names.map(n => new EmptyCounty(n)))
+    }
+    def remove(names: CounterKey*) {}
+    def filterKey(fun: (String) => String) = this
+    def transformKey(fun: (String) => String) = this
+    def children = List()
+  }
 
 }

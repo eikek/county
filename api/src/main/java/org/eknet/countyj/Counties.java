@@ -23,6 +23,7 @@ import java.util.List;
 import org.eknet.county.CounterKey;
 import org.eknet.county.County;
 import scala.collection.JavaConversions$;
+import scala.collection.mutable.Buffer;
 
 /**
  * @author <a href="mailto:eike.kettner@gmail.com">Eike Kettner</a>
@@ -42,16 +43,25 @@ public final class Counties {
   }
 
   static JCounty next(County c, String... path) {
-    List<CounterKey> keys = new ArrayList<>(path.length);
-    for (String s : path) {
-      keys.add(CounterKey.apply(s));
-    }
-    return JCounty.from(c).apply(JavaConversions$.MODULE$.asScalaBuffer(keys));
+    List<CounterKey> keys = pathToKey(path);
+    return JCounty.from(c).apply(asScala(keys));
   }
 
   static JCounty next(County c, CounterKey... paths) {
     //noinspection unchecked
     List<CounterKey> keys = Arrays.asList(paths);
-    return JCounty.from(c).apply(JavaConversions$.MODULE$.asScalaBuffer(keys));
+    return JCounty.from(c).apply(asScala(keys));
+  }
+
+  static List<CounterKey> pathToKey(String ... path) {
+    List<CounterKey> keys = new ArrayList<>(path.length);
+    for (String s : path) {
+      keys.add(CounterKey.apply(s));
+    }
+    return keys;
+  }
+
+  static <A> Buffer<A> asScala(List<A> list) {
+    return JavaConversions$.MODULE$.asScalaBuffer(list);
   }
 }

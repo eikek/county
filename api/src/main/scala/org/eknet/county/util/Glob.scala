@@ -1,6 +1,6 @@
-package org.eknet.county
+package org.eknet.county.util
 
-import org.eknet.county.Glob.{Token, Lexer}
+import org.eknet.county.util.Glob.{Token, Lexer}
 
 /**
  * Simple ant-style glob impl for matching paths. It only supports the following three

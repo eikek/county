@@ -35,6 +35,10 @@ trait CompositeCounty extends County with ProxyCounter {
     }
   }
 
+  def remove(names: CounterKey*) {
+    counties.foreach(_.remove(names: _*))
+  }
+
   def filterKey(fun: (String) => String) = {
     new BasicCompositeCounty(path, counties.map(_.filterKey(fun)))
   }
@@ -45,12 +49,12 @@ trait CompositeCounty extends County with ProxyCounter {
 
   def children = counties.flatMap(_.children)
 
-  override def toString() = getClass.getSimpleName+"["+path+"]"
 }
 
 class BasicCompositeCounty(val path: CounterKey, val counties: Iterable[County]) extends CompositeCounty {
 
-  def this(c: Iterable[County]) = this(DefaultCounty.nextPath(c.map(_.path).toList, CounterKey.empty), c)
+  def this(c: Iterable[County]) = this(DefaultCounty.mergePaths(c.map(_.path).toList, CounterKey.empty), c)
 
   require(!counties.isEmpty, "counties argument must not be empty")
+
 }
