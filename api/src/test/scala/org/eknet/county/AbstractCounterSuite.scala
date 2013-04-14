@@ -19,14 +19,13 @@ package org.eknet.county
 import org.scalatest.FunSuite
 import org.scalatest.matchers.ShouldMatchers
 import org.slf4j.LoggerFactory
+import java.util.concurrent.{TimeUnit, Executors, CountDownLatch}
 
 /**
  * @author Eike Kettner eike.kettner@gmail.com
  * @since 26.03.13 19:55
  */
 abstract class AbstractCounterSuite extends FunSuite with ShouldMatchers {
-
-  val log = LoggerFactory.getLogger(getClass)
 
   def createCounter(gran: Granularity): Counter
 
@@ -93,25 +92,25 @@ abstract class AbstractCounterSuite extends FunSuite with ShouldMatchers {
   test ("mass update test") {
     createCounter(Granularity.Millis).reset()
     stresstest(Granularity.Millis)
-    log.info("----------------------------------------------------------")
+    info("----------------------------------------------------------")
     createCounter(Granularity.Second).reset()
     stresstest(Granularity.Second)
-    log.info("----------------------------------------------------------")
+    info("----------------------------------------------------------")
     createCounter(Granularity.Minute).reset()
     stresstest(Granularity.Minute)
-    log.info("----------------------------------------------------------")
+    info("----------------------------------------------------------")
     createCounter(Granularity.Second).reset()
     stresstest(Granularity.Second)
-    log.info("----------------------------------------------------------")
+    info("----------------------------------------------------------")
     createCounter(Granularity.Millis).reset()
     stresstest(Granularity.Millis)
   }
 
   private def stresstest(gran: Granularity, max: Int = 1000) {
     val start = System.currentTimeMillis()
-    log.info("Starting %d updates for counter with granularity=%s".format(max, gran.name))
+    info("Starting %d updates for counter with granularity=%s".format(max, gran.name))
     val counter = createCounter(gran)
-    log.info("Created counter in %d ms".format(System.currentTimeMillis() - start))
+    info("Created counter in %d ms".format(System.currentTimeMillis() - start))
     var sum = 0L
     for (i <- 1 to max) {
       val starti = System.currentTimeMillis()
@@ -123,10 +122,44 @@ abstract class AbstractCounterSuite extends FunSuite with ShouldMatchers {
       }
       sum = sum + (System.currentTimeMillis() - starti)
     }
-    log.info("Incremented in %d ms. Average time per loop: %d ms".format( (System.currentTimeMillis() - start), (sum / max)))
+    counter.totalCount should be (max + ((max /4)*3))
+    info("Incremented in %d ms. Average time per loop: %d ms".format( (System.currentTimeMillis() - start), (sum / max)))
     val totals = max + ((max / 4) * 3)
     counter.totalCount should be (totals)
     val executionTime = System.currentTimeMillis() - start
-    log.info("Total time: %d ms".format(executionTime))
+    info("Total time: %d ms".format(executionTime))
+  }
+
+  private def threadingTest(gran: Granularity) {
+    val start = System.currentTimeMillis()
+    val counter = createCounter(gran)
+    val peng = new CountDownLatch(1)
+    val pool = Executors.newFixedThreadPool(3)
+    val max = 200
+    val counting = new Runnable {
+      def run() {
+        peng.await(20, TimeUnit.SECONDS)
+        for (i <- 1 to max) {
+          counter.increment()
+          if (i % 4 == 0) {
+            counter.add(2)
+          }
+        }
+      }
+    }
+    val nThreads = 3
+    val futures = for (i <- 1 to nThreads) yield pool.submit(counting)
+    peng.countDown()
+    futures.foreach(_.get(20, TimeUnit.SECONDS))
+    val expectedCount = nThreads * (max + (max/4*2))
+    counter.totalCount should be (expectedCount)
+    info("-- Threading ["+gran.name+"] took "+ (System.currentTimeMillis() - start)+ "ms")
+  }
+
+  test ("threading test") {
+    //counters should be safe to use concurrently from multiple threads
+    threadingTest(Granularity.Millis)
+    threadingTest(Granularity.Second)
+    threadingTest(Granularity.Minute)
   }
 }

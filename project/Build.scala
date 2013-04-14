@@ -78,7 +78,7 @@ object RootBuild extends Build {
     scalacOptions ++= Seq("-unchecked", "-deprecation"),
     resolvers := Seq(Resolvers.eknet),
     pomIncludeRepository := (_ => false),
-    parallelExecution := false,
+    parallelExecution in Test := false,
     scmInfo := Some(ScmInfo(new URL("https://eknet.org/gitr/?r=county.git"), "scm:git:https://eknet.org/git/county.git")),
     licenses := Seq(("ASL2", new URL("http://www.apache.org/licenses/LICENSE-2.0.txt")))
   )
@@ -94,6 +94,7 @@ object Api extends Build {
 
   lazy val buildSettings = Project.defaultSettings ++ Seq(
     name := "county-api",
+    parallelExecution in Test := false,
     libraryDependencies ++= deps
   )
 
@@ -111,6 +112,7 @@ object BlueprintsBackend extends Build {
 
   lazy val buildSettings = Project.defaultSettings ++ Seq(
     name := "county-blueprints",
+    parallelExecution in Test := false,
     libraryDependencies ++= deps
   )
 
@@ -127,6 +129,7 @@ object XChart extends Build {
 
   lazy val buildSettings = Project.defaultSettings ++ Seq(
     name := "county-xchart",
+    parallelExecution in Test := false,
     libraryDependencies ++= deps
   )
 

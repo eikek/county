@@ -1,31 +1,28 @@
 package org.eknet.county.blueprints
 
-import org.scalatest.{BeforeAndAfter, FunSuite}
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfter, FunSuite}
 import org.scalatest.matchers.ShouldMatchers
 import com.tinkerpop.blueprints.impls.orient.OrientGraph
 import java.nio.file.{Path, Files}
 import org.eknet.county.{FileUtils, AbstractCounterSuite, Granularity}
 import com.tinkerpop.blueprints.Direction
+import java.util.UUID
 
 /**
  * @author Eike Kettner eike.kettner@gmail.com
  * @since 25.03.13 00:23
  */
-class VertexCounterSuite extends AbstractCounterSuite with FileUtils with BeforeAndAfter {
+class VertexCounterSuite extends AbstractCounterSuite with FileUtils with BeforeAndAfterAll {
 
-  private var graphdir: Path = null
+  private var graphdir: Path = GraphUtil.createGraphDir
 
-  before {
-    graphdir = GraphUtil.createGraphDir
-  }
-
-  after {
+  override def afterAll() {
     removeDir(graphdir)
   }
 
   def createCounter(gran: Granularity) = {
     val pool = new BlueprintsPool(GraphUtil.createGraph(graphdir), gran)
-    pool.getOrCreate("test-counter")
+    pool.getOrCreate(UUID.randomUUID().toString)
   }
 
   test ("granularity tests 1") {

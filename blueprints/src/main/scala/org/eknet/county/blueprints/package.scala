@@ -10,7 +10,7 @@ import com.tinkerpop.blueprints.TransactionalGraph.Conclusion
  */
 package object blueprints {
 
-  def withTx[A](body: => A)(implicit g: Graph): A = {
+  def withTx[A](body: => A)(implicit g: Graph): A = synchronized {
     try {
       val r = body
       commit(g, Conclusion.SUCCESS)

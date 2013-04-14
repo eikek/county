@@ -62,6 +62,27 @@ object CounterKey {
     }
   }
 
+  /**
+   * Creates a key using the given list as one segment.
+   *
+   * The following two lines are equivalent:
+   * {{{
+   *   CounterKey.create(List("a", "b"))
+   *   CounterKey("a|b")
+   * }}}
+   *
+   * @param multiple
+   * @return
+   */
+  def create(multiple: Iterable[String]) = CounterKey(List(multiple.toList.sorted))
+
+  /**
+   * Creates a key with the given single segment.
+   * @param segment
+   * @return
+   */
+  def create(segment: String) = CounterKey(List(List(segment)))
+
   def containsWildcard(str: String) = str.contains("*") || str.contains("?")
 
   /**

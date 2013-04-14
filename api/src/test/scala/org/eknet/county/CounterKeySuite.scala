@@ -30,8 +30,6 @@ class CounterKeySuite extends FunSuite with ShouldMatchers {
     k.path should have size (3)
     k.asString should be ("a.b.c")
     k.path.map(_.size) should be (List(1,1,1))
-
-    CounterKey("") should be (CounterKey.empty)
   }
 
   test ("path with multiple selection") {
@@ -46,4 +44,9 @@ class CounterKeySuite extends FunSuite with ShouldMatchers {
     k.path.map(_.size) should be (List(1, 2))
   }
 
+  test ("creation") {
+    CounterKey.create("hello") should be (CounterKey("hello"))
+    CounterKey.create(Seq("hello", "world")) should be (CounterKey("hello|world"))
+    CounterKey("") should be (CounterKey.empty)
+  }
 }

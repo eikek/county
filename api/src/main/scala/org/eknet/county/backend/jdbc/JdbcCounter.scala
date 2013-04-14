@@ -46,28 +46,31 @@ class JdbcCounter(val granularity: Granularity, val metadataTable: String, val c
   def add(when: TimeKey, value: Long) {
     if (value != 0) {
       val key = granularity.keyFor(when.timestamp).timestamp
-      withTx { conn =>
-        val select = conn.prepareStatement(selectCountSql)
-        select.setString(1, id)
-        select.setLong(2, key)
-        val rs = select.executeQuery()
-        if (rs.next()) {
-          val update = conn.prepareStatement(updateCountSql)
-          update.setLong(1, value)
+      synchronized {
+
+        withTx { conn =>
+          val select = conn.prepareStatement(selectCountSql)
+          select.setString(1, id)
+          select.setLong(2, key)
+          val rs = select.executeQuery()
+          if (rs.next()) {
+            val update = conn.prepareStatement(updateCountSql)
+            update.setLong(1, value)
+            update.setString(2, id)
+            update.setLong(3, key)
+            update.executeUpdate()
+          } else {
+            val insert = conn.prepareStatement(insertCountSql)
+            insert.setString(1, id)
+            insert.setLong(2, key)
+            insert.setLong(3, value)
+            insert.executeUpdate()
+          }
+          val update = conn.prepareStatement(setLastAccessTimeSql)
+          update.setLong(1, System.currentTimeMillis())
           update.setString(2, id)
-          update.setLong(3, key)
           update.executeUpdate()
-        } else {
-          val insert = conn.prepareStatement(insertCountSql)
-          insert.setString(1, id)
-          insert.setLong(2, key)
-          insert.setLong(3, value)
-          insert.executeUpdate()
         }
-        val update = conn.prepareStatement(setLastAccessTimeSql)
-        update.setLong(1, System.currentTimeMillis())
-        update.setString(2, id)
-        update.executeUpdate()
       }
     }
   }

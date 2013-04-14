@@ -98,25 +98,27 @@ class JdbcFlatCounter(val granularity: Granularity, table: String, dataSource: D
   def add(when: TimeKey, value: Long) {
     if (value != 0) {
       val timekey = granularity.keyFor(when.timestamp).timestamp
-      withTx { conn =>
-        val query = conn.prepareStatement(selectEntrySQL)
-        query.setLong(1, timekey)
-        val rs = query.executeQuery()
-        if (rs.next()) {
-          val update = conn.prepareStatement(updateEntrySQL)
-          update.setLong(1, value)
-          update.setLong(2, timekey)
+      synchronized {
+        withTx { conn =>
+          val query = conn.prepareStatement(selectEntrySQL)
+          query.setLong(1, timekey)
+          val rs = query.executeQuery()
+          if (rs.next()) {
+            val update = conn.prepareStatement(updateEntrySQL)
+            update.setLong(1, value)
+            update.setLong(2, timekey)
+            update.executeUpdate()
+          } else {
+            val insert = conn.prepareStatement(insertEntrySQL)
+            insert.setLong(1, timekey)
+            insert.setLong(2, value)
+            insert.executeUpdate()
+          }
+          val update = conn.prepareStatement(setEntrySQL)
+          update.setLong(1, System.currentTimeMillis())
+          update.setLong(2, specialTimeKeyLastAccess)
           update.executeUpdate()
-        } else {
-          val insert = conn.prepareStatement(insertEntrySQL)
-          insert.setLong(1, timekey)
-          insert.setLong(2, value)
-          insert.executeUpdate()
         }
-        val update = conn.prepareStatement(setEntrySQL)
-        update.setLong(1, System.currentTimeMillis())
-        update.setLong(2, specialTimeKeyLastAccess)
-        update.executeUpdate()
       }
     }
   }

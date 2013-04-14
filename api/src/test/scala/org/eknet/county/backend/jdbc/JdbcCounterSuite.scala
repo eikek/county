@@ -19,27 +19,25 @@ package org.eknet.county.backend.jdbc
 import org.eknet.county.{Granularity, AbstractCounterSuite}
 import java.util.UUID
 import java.nio.file.Path
-import org.scalatest.BeforeAndAfter
+import org.scalatest.{BeforeAndAfterAll, BeforeAndAfter}
 
 /**
  * @author Eike Kettner eike.kettner@gmail.com
  * @since 26.03.13 21:31
  */
-class JdbcCounterSuite extends AbstractCounterSuite with DerbyFixture with BeforeAndAfter {
+class JdbcCounterSuite extends AbstractCounterSuite with DerbyFixture with BeforeAndAfterAll {
 
-  private var dbname: Path = null
+  private val dbname: Path = getUniqueDatabasename
+  private val ds = createDataSource(dbname)
 
-  before {
-    dbname = getUniqueDatabasename
-  }
 
-  after {
+  override def afterAll() {
     removeDir(dbname)
   }
 
   def createCounter(gran: Granularity) = {
-    val ds = createDataSource(dbname)
-    new JdbcCounterPool(gran, ds).getOrCreate("testcounter")
+    val pool = new JdbcCounterPool(gran, ds)
+    pool.getOrCreate(UUID.randomUUID().toString)
   }
 
 }

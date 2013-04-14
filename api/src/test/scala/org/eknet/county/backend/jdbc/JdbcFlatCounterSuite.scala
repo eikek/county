@@ -19,6 +19,7 @@ package org.eknet.county.backend.jdbc
 import org.eknet.county.{Granularity, AbstractCounterSuite}
 import java.nio.file.Path
 import org.scalatest.BeforeAndAfter
+import java.util.UUID
 
 /**
  * @author Eike Kettner eike.kettner@gmail.com
@@ -39,7 +40,7 @@ class JdbcFlatCounterSuite extends AbstractCounterSuite with DerbyFixture with B
   def createCounter(gran: Granularity) = {
     val ds = createDataSource(dbname)
     val pool = new JdbcFlatCounterPool(gran, ds)
-    pool.getOrCreate("testcounter")
+    pool.getOrCreate(UUID.randomUUID().toString)
   }
 
 }
