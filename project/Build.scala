@@ -66,14 +66,14 @@ object RootBuild extends Build {
   )
 
   override lazy val settings = super.settings ++ Seq(
-    version := "0.2.0-SNAPSHOT",
+    version := "0.2.0",
     organization := "org.eknet.county",
     scalaVersion := Version.scala,
     publishTo := Some("eknet-maven2" at "https://eknet.org/maven2"),
     publishArtifact in Test := true,
     publishMavenStyle := true,
     credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
-    crossScalaVersions := Seq("2.9.2", "2.9.3", "2.10.1"),
+    crossScalaVersions := Seq("2.9.2", "2.9.3", "2.10.2"),
     exportJars := true,
     scalacOptions ++= Seq("-unchecked", "-deprecation"),
     resolvers := Seq(Resolvers.eknet),

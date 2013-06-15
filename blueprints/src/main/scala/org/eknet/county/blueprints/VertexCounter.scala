@@ -47,13 +47,9 @@ class VertexCounter(gran: Granularity, val vertex: Vertex, graph: Graph) extends
       withTx {
         vertex.getVertices(Direction.OUT, normed+"").toList match {
           case a::Nil => {
-            val cur = a.getProperty[Long](counterValue)
+            val next = Option(a.getProperty[Long](counterValue)).map(_ + value).getOrElse(value)
             a.setProperty(timeKey, normed)
-            if (cur == null) {
-              a.setProperty(counterValue, value)
-            } else {
-              a.setProperty(counterValue, cur + value)
-            }
+            a.setProperty(counterValue, next)
           }
           case Nil => {
             val a = graph.addVertex(null)

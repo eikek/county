@@ -43,8 +43,6 @@ class BasicCounter(val granularity: Granularity) extends CounterBase with Serial
     last.set(System.currentTimeMillis())
     if (ex != null) {
       ex.addAndGet(value)
-    } else {
-      value
     }
   }
 
